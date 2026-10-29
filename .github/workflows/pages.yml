@@ -71,7 +71,6 @@ jobs:
       - name: Настроить GitHub Pages
         uses: actions/configure-pages@v5
         with:
-          enablement: true
 
       - name: Подготовить статический сайт
         run: |
