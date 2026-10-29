@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "LifeRPG — Командный центр",
+  "short_name": "LifeRPG",
+  "description": "Личный командный центр LifeRPG",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101013",
+  "theme_color": "#111114",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
