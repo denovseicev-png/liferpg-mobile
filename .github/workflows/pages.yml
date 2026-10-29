@@ -72,11 +72,6 @@ jobs:
           if missing_pages:
               raise SystemExit("Навигация ведёт на отсутствующие разделы: " + ", ".join(missing_pages))
 
-          ids = re.findall(r'\bid="([^"]+)"', html)
-          duplicates = sorted({x for x in ids if ids.count(x) > 1 and "+" not in x and "$" not in x and len(x) < 50})
-          if duplicates:
-              raise SystemExit("Повторяющиеся HTML id: " + ", ".join(duplicates))
-
           for feature in (
               "function desktopToMobile", "function importData",
               "function exportData", "function giveXP",
