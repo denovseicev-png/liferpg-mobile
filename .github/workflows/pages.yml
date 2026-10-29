@@ -1,0 +1,87 @@
+name: Проверка и публикация LifeRPG Mobile
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Самопроверка PWA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@v4
+
+      - name: Проверить структуру и JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = ["index.html", "manifest.json", "icon.svg", "sw.js"]
+          missing = [name for name in required if not Path(name).is_file()]
+          if missing:
+              raise SystemExit("Не найдены файлы: " + ", ".join(missing))
+
+          manifest = json.loads(Path("manifest.json").read_text(encoding="utf-8"))
+          if manifest.get("display") not in {"standalone", "fullscreen", "minimal-ui"}:
+              raise SystemExit("PWA: неверный режим display")
+          for key in ("start_url", "scope", "name", "icons"):
+              if key not in manifest:
+                  raise SystemExit(f"В manifest.json отсутствует {key}")
+
+          html = Path("index.html").read_text(encoding="utf-8")
+          sw = Path("sw.js").read_text(encoding="utf-8")
+          for asset in ("manifest.json", "icon.svg", "sw.js"):
+              if asset not in html:
+                  raise SystemExit(f"index.html не ссылается на {asset}")
+          for asset in ("index.html", "manifest.json", "icon.svg"):
+              if asset not in sw:
+                  raise SystemExit(f"sw.js не кэширует {asset}")
+
+          if "serviceWorker.register" not in html:
+              raise SystemExit("В index.html не найдена регистрация Service Worker")
+          if "localStorage" not in html:
+              raise SystemExit("Не найдена локальная сохранность данных")
+          print("OK: структура, manifest, ссылки, офлайн-оболочка и localStorage")
+          PY
+
+  deploy:
+    name: Публикация GitHub Pages
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@v4
+
+      - name: Настроить GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Подготовить статический сайт
+        run: |
+          touch .nojekyll
+          mkdir -p _site
+          cp index.html manifest.json icon.svg sw.js README_RU.md .nojekyll _site/
+
+      - name: Загрузить сайт
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Опубликовать
+        id: deployment
+        uses: actions/deploy-pages@v4
