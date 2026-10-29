@@ -53,6 +53,14 @@ jobs:
               raise SystemExit("Не найдена локальная сохранность данных")
           print("OK: структура, manifest, ссылки, офлайн-оболочка и localStorage")
           PY
+          python - <<'PY'
+          from pathlib import Path
+          html = Path("index.html").read_text(encoding="utf-8")
+          start = html.index("<script>") + len("<script>")
+          end = html.index("</script>", start)
+          Path("/tmp/liferpg-mobile.js").write_text(html[start:end], encoding="utf-8")
+          PY
+          node --check /tmp/liferpg-mobile.js
 
   deploy:
     name: Публикация GitHub Pages
