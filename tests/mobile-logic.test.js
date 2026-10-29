@@ -111,3 +111,10 @@ test('начисление XP не проходит сверх дневного 
   assert.equal(c.state.xp, 10);
   assert.equal(c.state.journal.filter(x => x.xp > 0).length, 1);
 });
+
+test('импорт не сообщает об успехе, если резервная копия не сохранилась', () => {
+  assert.match(
+    html,
+    /const previous=state;state=normalize\(parsed\);if\(!save\(\)\)\{state=previous;render\(\);return\}/
+  );
+});
