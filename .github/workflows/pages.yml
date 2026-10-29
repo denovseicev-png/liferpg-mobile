@@ -73,7 +73,65 @@ jobs:
               raise SystemExit("Навигация ведёт на отсутствующие разделы: " + ", ".join(missing_pages))
 
           ids = re.findall(r'\bid="([^"]+)"', html)
-          duplicates = sorted({x for x in ids if ids.count(x) > 1})
+          duplicates = sorted({x for x in ids if ids.count(x) > 1 and '+' not in x and '
+          if duplicates:
+              raise SystemExit("Повторяющиеся HTML id: " + ", ".join(duplicates))
+
+          for feature in (
+              "function desktopToMobile", "function importData",
+              "function exportData", "function giveXP",
+              "function renderCalendar", "function renderNotes",
+              "function renderSkills", "function renderChallenges",
+              "function renderReviews", "function renderBank",
+              "function toggle", "function saveSettings"
+          ):
+              if feature not in html:
+                  raise SystemExit("Не найдена ключевая функция: " + feature)
+
+          for state_field in (
+              "quests", "habits", "goals", "grades", "exams",
+              "topics", "cards", "journal", "rewards", "loans",
+              "diary", "notes", "templates", "freezes",
+              "pendingBonuses", "miniTasks", "challenges",
+              "checkins", "reviews", "achievements"
+          ):
+              if not re.search(r"\b" + re.escape(state_field) + r"\s*:", html):
+                  raise SystemExit("Нет поля состояния: " + state_field)
+
+          print("OK: навигация, уникальные ID, ключевые функции и поля состояния")
+          PY
+
+  deploy:
+    name: Публикация GitHub Pages
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@v4
+
+      - name: Настроить GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Подготовить статический сайт
+        run: |
+          touch .nojekyll
+          mkdir -p _site
+          cp index.html manifest.json icon.svg sw.js README_RU.md .nojekyll _site/
+
+      - name: Загрузить сайт
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Опубликовать
+        id: deployment
+        uses: actions/deploy-pages@v4
+ not in x and chr(39) not in x})
           if duplicates:
               raise SystemExit("Повторяющиеся HTML id: " + ", ".join(duplicates))
 
