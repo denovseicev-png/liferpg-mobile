@@ -95,7 +95,7 @@ jobs:
               "pendingBonuses", "miniTasks", "challenges",
               "checkins", "reviews", "achievements"
           ):
-              if not re.search(r"\\b" + re.escape(state_field) + r"\\s*:", html):
+              if not re.search(r"\b" + re.escape(state_field) + r"\s*:", html):
                   raise SystemExit("Нет поля состояния: " + state_field)
 
           print("OK: навигация, уникальные ID, ключевые функции и поля состояния")
