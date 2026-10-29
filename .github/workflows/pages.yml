@@ -61,6 +61,45 @@ jobs:
           Path("/tmp/liferpg-mobile.js").write_text(html[start:end], encoding="utf-8")
           PY
           node --check /tmp/liferpg-mobile.js
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          html = Path("index.html").read_text(encoding="utf-8")
+          page_ids = set(re.findall(r'<div id="page-([^"]+)" class="page(?: active)?">', html))
+          nav_pages = set(re.findall(r'data-page="([^"]+)"', html))
+          missing_pages = sorted(nav_pages - page_ids)
+          if missing_pages:
+              raise SystemExit("Навигация ведёт на отсутствующие разделы: " + ", ".join(missing_pages))
+
+          ids = re.findall(r'\bid="([^"]+)"', html)
+          duplicates = sorted({x for x in ids if ids.count(x) > 1})
+          if duplicates:
+              raise SystemExit("Повторяющиеся HTML id: " + ", ".join(duplicates))
+
+          for feature in (
+              "function desktopToMobile", "function importData",
+              "function exportData", "function giveXP",
+              "function renderCalendar", "function renderNotes",
+              "function renderSkills", "function renderChallenges",
+              "function renderReviews", "function renderBank",
+              "function toggle", "function saveSettings"
+          ):
+              if feature not in html:
+                  raise SystemExit("Не найдена ключевая функция: " + feature)
+
+          for state_field in (
+              "quests", "habits", "goals", "grades", "exams",
+              "topics", "cards", "journal", "rewards", "loans",
+              "diary", "notes", "templates", "freezes",
+              "pendingBonuses", "miniTasks", "challenges",
+              "checkins", "reviews", "achievements"
+          ):
+              if not re.search(r"\\b" + re.escape(state_field) + r"\\s*:", html):
+                  raise SystemExit("Нет поля состояния: " + state_field)
+
+          print("OK: навигация, уникальные ID, ключевые функции и поля состояния")
+          PY
 
   deploy:
     name: Публикация GitHub Pages
