@@ -61,6 +61,7 @@ jobs:
           Path("/tmp/liferpg-mobile.js").write_text(html[start:end], encoding="utf-8")
           PY
           node --check /tmp/liferpg-mobile.js
+          node --test tests/mobile-logic.test.js
           python - <<'PY'
           import re
           from pathlib import Path
