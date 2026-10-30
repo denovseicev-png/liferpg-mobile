@@ -50,7 +50,7 @@ function makeContext() {
       .reduce((sum, x) => sum + Math.max(0, Number(x.xp) || 0), 0),
     checkAchievements: () => {},
     toast: () => {},
-    save: () => {},
+    save: () => true,
     render: () => {},
     clearInterval: () => {},
     setInterval: () => 1,
