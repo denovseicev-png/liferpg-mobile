@@ -398,10 +398,13 @@ function focusSwitchMode(modeId){
  const timer=state.focusTimer,mode=state.focusModes.find(x=>x.id===modeId);
  if(!mode)return;
  if(timer.running){toast('Поставь таймер на паузу перед сменой режима');return}
+ const previous={selectedMode:timer.selectedMode,phase:timer.phase,remainingSeconds:timer.remainingSeconds};
  timer.selectedMode=mode.id;
- timer.phase='focus';
- timer.remainingSeconds=mode.focusMinutes*60;
- save();renderFocus();updateFocusHomeSummary();
+ timer.remainingSeconds=focusDuration(mode.id,timer.phase);
+ if(!save()){
+  Object.assign(timer,previous);renderFocus();return;
+ }
+ renderFocus();updateFocusHomeSummary();
 }
 function updateFocusHomeSummary(){
  const el=$('home-focus-summary');
@@ -453,10 +456,14 @@ function focusReset(){
  const timer=state.focusTimer;
  const remainder=timer.elapsedFocusSeconds%600;
  if(remainder&&!confirm('В этой сессии накоплено '+Math.floor(remainder/60)+' мин '+(remainder%60)+' сек до следующей награды. Сбросить этот остаток? Уже начисленные XP останутся.'))return;
+ const previous=Object.assign({},timer);
  timer.running=false;clearInterval(focusInterval);focusInterval=null;
  timer.sessionId=uid();timer.phase='focus';timer.elapsedFocusSeconds=0;timer.rewardedBlocks=0;
  timer.remainingSeconds=focusDuration(timer.selectedMode,'focus');
- save();updateFocusTimerUI();updateFocusHomeSummary();
+ if(!save()){
+  Object.assign(timer,previous);updateFocusTimerUI();return;
+ }
+ updateFocusTimerUI();updateFocusHomeSummary();
  toast('Начата новая фокус-сессия. Уже начисленные награды сохранены.');
 }
 
