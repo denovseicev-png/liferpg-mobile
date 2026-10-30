@@ -211,10 +211,13 @@ function focusAwardDueBlocks(){
   const attribute=String(settings.rewardAttribute||'Разум');
   const title='Фокус · 10 минут';
   const sourceId='focus-'+timer.sessionId+'-'+block;
-  if(xp>0&&!giveXP(xp,title,'focus',attribute,sourceId)){
-   if(!state.pendingBonuses.some(x=>x.sourceId===sourceId)){
-    state.pendingBonuses.push({id:uid(),xp,note:title,attribute,date:today(),sourceId});
-   }
+  const alreadyEarned=state.journal.some(x=>x.sourceId===sourceId&&x.xp>0);
+  const alreadyPending=state.pendingBonuses.some(x=>x.sourceId===sourceId);
+  if(xp>0&&!alreadyEarned&&!alreadyPending&&
+     !giveXP(xp,title,'focus',attribute,sourceId)){
+   state.pendingBonuses.push({
+    id:uid(),xp,note:title,attribute,date:today(),sourceId
+   });
   }
   timer.rewardedBlocks=block;
  }
