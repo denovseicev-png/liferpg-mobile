@@ -167,7 +167,7 @@ test('панель меню имеет размытый затемнённый �
   assert.match(css[0], /background:/);
 });
 
-test('меню Все содержит все 13 разделов в правильном порядке', () => {
+test('меню Все содержит все 14 разделов в правильном порядке', () => {
   const overlay = html.match(/id="section-menu-overlay"[\s\S]*?id="toast"/);
   assert.ok(overlay, 'оверлей меню найден');
   const pages = [...overlay[0].matchAll(/data-menu-page="([^"]+)"/g)].map(x => x[1]);
@@ -515,8 +515,12 @@ function loadAtlasFunctions(context) {
   context.xpToday = () => context.state.journal
     .filter(x => x.date === context.today())
     .reduce((sum, x) => sum + Math.max(0, Number(x.xp) || 0), 0);
+  context.state.settings.atlasHistory = [];
+  context.renderAtlas = () => {};
+  context.render = () => {};
+  context.toast = () => {};
   vm.runInNewContext(
-    ['atlasNormalize', 'atlasCommand'].map(functionSource).join('\n'),
+    ['atlasNormalize', 'atlasCommand', 'atlasHandleInput'].map(functionSource).join('\n'),
     context
   );
   return context;
@@ -620,4 +624,26 @@ test('история АТЛАСА хранится в локальных нас�
   assert.match(html, /id="atlas-form"/);
   assert.match(html, /id="page-atlas"/);
   assert.match(html, /data-menu-page="atlas"/);
+});
+
+test('история АТЛАСА ограничена 80 сообщениями', () => {
+  const c = loadAtlasFunctions(makeContext());
+  c.state.settings.atlasHistory = Array.from({ length: 80 }, (_, i) => ({
+    role: i % 2 ? 'assistant' : 'user', text: 'Старое сообщение ' + i
+  }));
+
+  c.atlasHandleInput('помощь');
+
+  assert.equal(c.state.settings.atlasHistory.length, 80);
+  assert.equal(c.state.settings.atlasHistory.at(-1).role, 'assistant');
+});
+
+test('АТЛАС откатывает создание записи, если локальное сохранение не удалось', () => {
+  const c = loadAtlasFunctions(makeContext());
+  c.save = () => false;
+
+  c.atlasHandleInput('создай квест не сохранять');
+
+  assert.equal(c.state.quests.length, 0);
+  assert.equal(c.state.settings.atlasHistory.length, 0);
 });
