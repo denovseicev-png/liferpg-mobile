@@ -2,7 +2,7 @@ name: Проверка и публикация LifeRPG Mobile
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/mobile-focus-modes]
   workflow_dispatch:
 
 permissions:
@@ -98,6 +98,7 @@ jobs:
           PY
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     name: Публикация GitHub Pages
     needs: check
     runs-on: ubuntu-latest
