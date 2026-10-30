@@ -482,3 +482,29 @@ test('настройки больше не обращаются к удалён�
   assert.doesNotMatch(html, /if\(t\.id==='timer-start'\)/);
   assert.doesNotMatch(html, /function updateTimerUI\(/);
 });
+
+
+test('ошибка сохранения тика откатывает секунды и XP без потери уже сохранённого состояния', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusModes = [
+    { id: 'short', name: 'Короткий', focusMinutes: 25, restMinutes: 5 }
+  ];
+  c.state.focusSettings = { rewardXP: 5, rewardAttribute: 'Разум' };
+  c.state.focusTimer = {
+    sessionId: 'storage-fail-1', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 1, elapsedFocusSeconds: 599,
+    rewardedBlocks: 0, running: true
+  };
+  c.save = () => false;
+
+  c.focusTick();
+
+  assert.equal(c.state.focusTimer.running, false);
+  assert.equal(c.state.focusTimer.remainingSeconds, 1);
+  assert.equal(c.state.focusTimer.elapsedFocusSeconds, 599);
+  assert.equal(c.state.focusTimer.rewardedBlocks, 0);
+  assert.equal(c.state.xp, 0);
+  assert.equal(c.state.total, 0);
+  assert.equal(c.state.journal.length, 0);
+  assert.equal(c.state.pendingBonuses.length, 0);
+});
