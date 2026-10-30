@@ -369,6 +369,9 @@ function updateFocusTimerUI(){
 }
 function saveFocusSettings(){
  const timer=state.focusTimer;
+ const oldModes=state.focusModes.map(mode=>Object.assign({},mode));
+ const oldSettings=Object.assign({},state.focusSettings);
+ const oldRemaining=timer.remainingSeconds;
  const oldDuration=focusDuration(timer.selectedMode,timer.phase);
  const wasAtPhaseStart=!timer.running&&timer.remainingSeconds===oldDuration;
  const modes=state.focusModes.map(mode=>({
@@ -384,7 +387,11 @@ function saveFocusSettings(){
  if(!timer.running){
   timer.remainingSeconds=wasAtPhaseStart?newDuration:Math.min(timer.remainingSeconds,newDuration);
  }
- save();renderFocus();updateFocusHomeSummary();
+ if(!save()){
+  state.focusModes=oldModes;state.focusSettings=oldSettings;timer.remainingSeconds=oldRemaining;
+  renderFocus();return;
+ }
+ renderFocus();updateFocusHomeSummary();
  toast('Настройки фокуса сохранены');
 }
 function focusSwitchMode(modeId){
@@ -409,13 +416,15 @@ function focusStartPause(){
   timer.running=false;
   clearInterval(focusInterval);
   focusInterval=null;
-  save();updateFocusTimerUI();updateFocusHomeSummary();
+  if(!save()){updateFocusTimerUI();return}
+  updateFocusTimerUI();updateFocusHomeSummary();
   toast('Фокус поставлен на паузу');
   return;
  }
  if(timer.remainingSeconds<=0)timer.remainingSeconds=focusDuration(timer.selectedMode,timer.phase);
  timer.running=true;
- save();updateFocusTimerUI();
+ if(!save()){timer.running=false;updateFocusTimerUI();return}
+ updateFocusTimerUI();
  clearInterval(focusInterval);
  focusInterval=setInterval(focusTick,1000);
 }
@@ -434,7 +443,11 @@ function focusTick(){
   timer.remainingSeconds=focusDuration(timer.selectedMode,timer.phase);
   toast(timer.phase==='rest'?'Отрезок фокуса завершён. Время отдохнуть.':'Перерыв окончен. Готовься к следующему фокусу.');
  }
- save();updateFocusTimerUI();updateFocusHomeSummary();
+ if(!save()){
+  timer.running=false;clearInterval(focusInterval);focusInterval=null;
+  updateFocusTimerUI();return;
+ }
+ updateFocusTimerUI();updateFocusHomeSummary();
 }
 function focusReset(){
  const timer=state.focusTimer;
