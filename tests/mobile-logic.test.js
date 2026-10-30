@@ -124,26 +124,42 @@ test('квесты доступны напрямую из настроек и с
   assert.match(html, /<option value="all" selected>Все квесты<\/option>/);
 });
 
-test('при переходе к разделу навигация прокручивается к активной вкладке', () => {
-  assert.match(html, /active\.getBoundingClientRect\(\)/);
-  assert.match(html, /nav\.getBoundingClientRect\(\)/);
-  assert.match(html, /nav\.scrollTo\(\{left:Math\.max\(0,Math\.min\(nav\.scrollWidth-nav\.clientWidth,left\)\),behavior:'smooth'\}\)/);
+test('при переходе к экрану отмечается соответствующий пункт меню', () => {
+  assert.match(html, /querySelectorAll\('\[data-menu-page\]'\)/);
+  assert.match(html, /b\.dataset\.menuPage===page/);
 });
 
-test('нижнее меню прокручивается от первого раздела к последнему', () => {
-  const navRule = html.match(/\.nav\{[^}]+\}/);
-  const buttonRule = html.match(/\.nav button\{[^}]+\}/);
-  assert.ok(navRule, 'CSS нижнего меню найден');
-  assert.ok(buttonRule, 'CSS кнопок меню найден');
-  assert.match(navRule[0], /justify-content:flex-start/);
-  assert.match(navRule[0], /overflow-x:auto/);
-  assert.match(navRule[0], /-webkit-overflow-scrolling:touch/);
-  assert.match(buttonRule[0], /flex:0 0 76px/);
-  assert.doesNotMatch(navRule[0], /justify-content:center/);
+test('нижняя панель содержит только кнопку Все', () => {
+  const nav = html.match(/<nav class="nav"[^>]*>[\s\S]*?<\/nav>/);
+  assert.ok(nav, 'нижняя панель найдена');
+  const buttons = [...nav[0].matchAll(/<button\b/g)];
+  assert.equal(buttons.length, 1);
+  assert.match(nav[0], /id="open-section-menu"/);
+  assert.match(nav[0], /Все/);
 });
 
-test('активная вкладка прокручивается в видимую область по фактическим координатам', () => {
-  assert.match(html, /active\.getBoundingClientRect\(\)/);
-  assert.match(html, /nav\.getBoundingClientRect\(\)/);
-  assert.match(html, /nav\.scrollWidth-nav\.clientWidth/);
+test('панель меню имеет размытый затемнённый фон', () => {
+  const css = html.match(/\.section-menu-overlay\{[^}]+\}/);
+  assert.ok(css, 'CSS фона меню найден');
+  assert.match(css[0], /backdrop-filter:\s*blur\(/);
+  assert.match(css[0], /background:/);
+});
+
+test('меню Все содержит все 12 разделов в правильном порядке', () => {
+  const overlay = html.match(/id="section-menu-overlay"[\s\S]*?id="toast"/);
+  assert.ok(overlay, 'оверлей меню найден');
+  const pages = [...overlay[0].matchAll(/data-menu-page="([^"]+)"/g)].map(x => x[1]);
+  assert.deepEqual(pages, [
+    'home', 'search', 'quests', 'habits', 'goals', 'study',
+    'bank', 'insights', 'calendar', 'notes', 'skills', 'settings'
+  ]);
+  assert.match(overlay[0], /role="dialog"/);
+});
+
+test('меню поддерживает открытие, закрытие, выбор и системную кнопку назад', () => {
+  assert.match(html, /function openSectionMenu\(/);
+  assert.match(html, /function closeSectionMenu\(/);
+  assert.match(html, /data-menu-page/);
+  assert.match(html, /addEventListener\('keydown'/);
+  assert.match(html, /addEventListener\('popstate'/);
 });
