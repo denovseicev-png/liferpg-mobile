@@ -12,6 +12,12 @@ function functionSource(name) {
   return html.slice(start, end === -1 ? html.indexOf('</script>', start) : end);
 }
 
+function loadFocusFunctions(context) {
+  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks'];
+  vm.runInNewContext(names.map(functionSource).join('\\n'), context);
+  return context;
+}
+
 function makeContext() {
   let id = 0;
   const today = '2026-10-29';
@@ -19,7 +25,7 @@ function makeContext() {
     xp: 0, total: 0, coins: 0,
     settings: { cap: 0, dailyLimit: 800, weeklyLimit: 6000 },
     journal: [], bankHistory: [], achievements: [],
-    quests: [], habits: [], goals: [], reviews: []
+    quests: [], habits: [], goals: [], reviews: [], pendingBonuses: []
   };
   const context = {
     state,
@@ -165,7 +171,8 @@ test('меню поддерживает открытие, закрытие, вы
 });
 
 test('три режима сохраняют настройки и мигрируют старую длительность фокуса', () => {
-  const modes = context.normalizeFocusModes([
+  const c = loadFocusFunctions(makeContext());
+  const modes = c.normalizeFocusModes([
     { id: 'one', name: 'Спринт', focusMinutes: 15, restMinutes: 3 },
     { id: 'two', name: 'Погружение', focusMinutes: 45, restMinutes: 9 }
   ], 30);
@@ -175,11 +182,11 @@ test('три режима сохраняют настройки и мигрир�
     ['Погружение', 45, 9],
     ['Длинный', 90, 15]
   ]);
-  assert.equal(context.normalizeFocusModes(null, 35)[0].focusMinutes, 35);
+  assert.equal(c.normalizeFocusModes(null, 35)[0].focusMinutes, 35);
 });
 
 test('награда доступна только за каждый полный блок в 600 секунд', () => {
-  assert.equal(context.focusBlocksToAward(599, 0), 0);
+  assert.equal(loadFocusFunctions(makeContext()).focusBlocksToAward(599, 0), 0);
   assert.equal(context.focusBlocksToAward(600, 0), 1);
   assert.equal(context.focusBlocksToAward(1200, 0), 2);
   assert.equal(context.focusBlocksToAward(1200, 2), 0);
@@ -187,7 +194,7 @@ test('награда доступна только за каждый полны�
 });
 
 test('каждый десятиминутный блок начисляется один раз выбранному атрибуту', () => {
-  const c = makeContext();
+  const c = loadFocusFunctions(makeContext());
   c.state.focusTimer = {
     sessionId: 'session-1', elapsedFocusSeconds: 1200, rewardedBlocks: 0
   };
@@ -202,7 +209,7 @@ test('каждый десятиминутный блок начисляется 
 });
 
 test('блок фокуса при исчерпанном лимите сохраняется как бонус с исходным атрибутом', () => {
-  const c = makeContext();
+  const c = loadFocusFunctions(makeContext());
   c.state.settings.dailyLimit = 5;
   c.state.focusTimer = {
     sessionId: 'session-2', elapsedFocusSeconds: 1200, rewardedBlocks: 0
