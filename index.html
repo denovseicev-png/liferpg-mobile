@@ -315,7 +315,7 @@ function renderSettings(){$('setting-daily').value=state.settings.daily;$('setti
 function renderCheckin(){const c=state.checkins.find(x=>x.date===today());if(c){$('check-energy').value=c.energy||3;$('check-mood').value=c.mood||3;$('check-focus').value=c.focus||'';$('check-note').value=c.note||''}}
 
 function atlasNormalize(value){
- return String(value||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[«»"'.,!?;:()]/g,' ').replace(/\\s+/g,' ').trim();
+ return String(value||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[«»"'.,!?;:()]/g,' ').replace(/\s+/g,' ').trim();
 }
 function atlasCommand(input){
  const command=String(input||'').trim().slice(0,300);
@@ -324,7 +324,7 @@ function atlasCommand(input){
  if(/^(помощь|help|что ты умеешь|команды)$/.test(clean)){
   return 'Я умею:\n• создать квест: «создай квест решить 5 задач»\n• создать привычку: «создай привычку читать 10 минут»\n• создать цель: «создай цель подготовиться к ОГЭ»\n• выполнить квест: «выполни квест повторить тему»\n• показать списки: «покажи квесты», «покажи привычки», «покажи цели»\n• показать статистику: «покажи статистику»\nЯ работаю локально и не использую облачные ИИ.';
  }
- let match=command.match(/^(?:создай|добавь)(?: мне)?\\s+квест\\s+(.+)$/i);
+ let match=command.match(/^(?:создай|добавь)(?: мне)?\s+квест\s+(.+)$/i);
  if(match){
   const title=match[1].trim().slice(0,120);
   if(title.length<2)return 'Название квеста слишком короткое.';
@@ -332,36 +332,36 @@ function atlasCommand(input){
   state.quests.push(item);
   return 'Создал квест «'+title+'» на сегодня. Награда — 10 XP. Изменить детали можно в разделе «Квесты».';
  }
- match=command.match(/^(?:создай|добавь)(?: мне)?\\s+привычку\\s+(.+)$/i);
+ match=command.match(/^(?:создай|добавь)(?: мне)?\s+привычку\s+(.+)$/i);
  if(match){
   const title=match[1].trim().slice(0,120);
   if(title.length<2)return 'Название привычки слишком короткое.';
   state.habits.push({id:uid(),title,xp:5,checks:[],note:''});
   return 'Добавил привычку «'+title+'». За отметку предусмотрено 5 XP.';
  }
- match=command.match(/^(?:создай|добавь)(?: мне)?\\s+цель\\s+(.+)$/i);
+ match=command.match(/^(?:создай|добавь)(?: мне)?\s+цель\s+(.+)$/i);
  if(match){
   const title=match[1].trim().slice(0,120);
   if(title.length<2)return 'Название цели слишком короткое.';
   state.goals.push({id:uid(),title,deadline:'',note:'',done:false,steps:[]});
   return 'Создал цель «'+title+'». Этапы можно добавить в разделе «Цели».';
  }
- if(/^(покажи|список|мои)\\s+квесты$/.test(clean)){
+ if(/^(покажи|список|мои)\s+квесты$/.test(clean)){
   if(!state.quests.length)return 'Пока нет квестов. Могу создать первый.';
   return 'Твои квесты:\n'+state.quests.slice(0,20).map((x,i)=>(i+1)+'. '+x.title+' — '+(x.doneDate===today()?'выполнен сегодня':'не выполнен')+' · '+(x.xp||0)+' XP').join('\n');
  }
- if(/^(покажи|список|мои)\\s+привычки$/.test(clean)){
+ if(/^(покажи|список|мои)\s+привычки$/.test(clean)){
   if(!state.habits.length)return 'Пока нет привычек.';
   return 'Твои привычки:\n'+state.habits.slice(0,20).map((x,i)=>(i+1)+'. '+x.title+' — '+(x.checks.includes(today())?'отмечена сегодня':'не отмечена')+' · '+(x.xp||0)+' XP').join('\n');
  }
- if(/^(покажи|список|мои)\\s+цели$/.test(clean)){
+ if(/^(покажи|список|мои)\s+цели$/.test(clean)){
   if(!state.goals.length)return 'Пока нет целей.';
   return 'Твои цели:\n'+state.goals.slice(0,20).map((x,i)=>(i+1)+'. '+x.title+' — '+(x.done?'завершена':'в процессе')).join('\n');
  }
  if(/^(покажи )?статистику$/.test(clean)){
   return 'Текущий прогресс:\n• XP всего: '+state.total+'\n• XP сегодня: '+xpToday()+'\n• Монеты: '+state.coins+'\n• Квестов: '+state.quests.length+'\n• Привычек: '+state.habits.length+'\n• Целей: '+state.goals.length;
  }
- match=command.match(/^выполни(?:ть)?\\s+квест\\s+(.+)$/i);
+ match=command.match(/^выполни(?:ть)?\s+квест\s+(.+)$/i);
  if(match){
   const target=match[1].trim();
   let found=[];
