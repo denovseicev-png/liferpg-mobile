@@ -187,10 +187,11 @@ test('три режима сохраняют настройки и мигрир�
 
 test('награда доступна только за каждый полный блок в 600 секунд', () => {
   assert.equal(loadFocusFunctions(makeContext()).focusBlocksToAward(599, 0), 0);
-  assert.equal(context.focusBlocksToAward(600, 0), 1);
-  assert.equal(context.focusBlocksToAward(1200, 0), 2);
-  assert.equal(context.focusBlocksToAward(1200, 2), 0);
-  assert.equal(context.focusBlocksToAward(1799, 1), 1);
+  const c = loadFocusFunctions(makeContext());
+  assert.equal(c.focusBlocksToAward(600, 0), 1);
+  assert.equal(c.focusBlocksToAward(1200, 0), 2);
+  assert.equal(c.focusBlocksToAward(1200, 2), 0);
+  assert.equal(c.focusBlocksToAward(1799, 1), 1);
 });
 
 test('каждый десятиминутный блок начисляется один раз выбранному атрибуту', () => {
