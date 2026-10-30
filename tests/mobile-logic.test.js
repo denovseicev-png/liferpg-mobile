@@ -118,3 +118,15 @@ test('импорт не сообщает об успехе, если резер�
     /const previous=state;state=normalize\(parsed\);if\(!save\(\)\)\{state=previous;render\(\);return\}/
   );
 });
+
+test('квесты доступны напрямую из настроек и список не скрывает старые записи по умолчанию', () => {
+  assert.match(html, /id="open-quests"/);
+  assert.match(html, /<option value="all" selected>Все квесты<\/option>/);
+});
+
+test('при переходе к разделу навигация прокручивается к активной вкладке', () => {
+  assert.match(
+    html,
+    /nav\.scrollTo\(\{left:Math\.max\(0,active\.offsetLeft-\(nav\.clientWidth-active\.offsetWidth\)\/2\),behavior:'smooth'\}\)/
+  );
+});
