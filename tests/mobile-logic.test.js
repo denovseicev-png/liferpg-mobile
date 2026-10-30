@@ -22,7 +22,7 @@ function functionSource(name) {
 }
 
 function loadFocusFunctions(context) {
-  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset'];
+  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode'];
   vm.runInNewContext(names.map(functionSource).join('\n'), context);
   return context;
 }
@@ -347,4 +347,28 @@ test('сброс сессии не отменяет уже начисленны�
   assert.equal(c.state.xp, 5);
   assert.equal(c.state.total, 5);
   assert.equal(c.state.journal.length, 1);
+});
+
+test('смена режима на паузе сохраняет накопленные фокус-секунды и выданные блоки', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusModes = [
+    { id: 'short', name: 'Короткий', focusMinutes: 25, restMinutes: 5 },
+    { id: 'deep', name: 'Глубокий', focusMinutes: 50, restMinutes: 10 },
+    { id: 'long', name: 'Длинный', focusMinutes: 90, restMinutes: 15 }
+  ];
+  c.state.focusTimer = {
+    sessionId: 'switch-1', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 400, elapsedFocusSeconds: 900,
+    rewardedBlocks: 1, running: false
+  };
+  c.renderFocus = () => {};
+  c.updateFocusHomeSummary = () => {};
+
+  c.focusSwitchMode('deep');
+
+  assert.equal(c.state.focusTimer.selectedMode, 'deep');
+  assert.equal(c.state.focusTimer.phase, 'focus');
+  assert.equal(c.state.focusTimer.remainingSeconds, 3000);
+  assert.equal(c.state.focusTimer.elapsedFocusSeconds, 900);
+  assert.equal(c.state.focusTimer.rewardedBlocks, 1);
 });
