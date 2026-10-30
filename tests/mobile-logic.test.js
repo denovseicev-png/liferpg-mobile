@@ -163,3 +163,57 @@ test('меню поддерживает открытие, закрытие, вы
   assert.match(html, /addEventListener\('keydown'/);
   assert.match(html, /addEventListener\('popstate'/);
 });
+
+test('три режима сохраняют настройки и мигрируют старую длительность фокуса', () => {
+  const modes = context.normalizeFocusModes([
+    { id: 'one', name: 'Спринт', focusMinutes: 15, restMinutes: 3 },
+    { id: 'two', name: 'Погружение', focusMinutes: 45, restMinutes: 9 }
+  ], 30);
+
+  assert.deepEqual(modes.map(x => [x.name, x.focusMinutes, x.restMinutes]), [
+    ['Спринт', 15, 3],
+    ['Погружение', 45, 9],
+    ['Длинный', 90, 15]
+  ]);
+  assert.equal(context.normalizeFocusModes(null, 35)[0].focusMinutes, 35);
+});
+
+test('награда доступна только за каждый полный блок в 600 секунд', () => {
+  assert.equal(context.focusBlocksToAward(599, 0), 0);
+  assert.equal(context.focusBlocksToAward(600, 0), 1);
+  assert.equal(context.focusBlocksToAward(1200, 0), 2);
+  assert.equal(context.focusBlocksToAward(1200, 2), 0);
+  assert.equal(context.focusBlocksToAward(1799, 1), 1);
+});
+
+test('каждый десятиминутный блок начисляется один раз выбранному атрибуту', () => {
+  const c = makeContext();
+  c.state.focusTimer = {
+    sessionId: 'session-1', elapsedFocusSeconds: 1200, rewardedBlocks: 0
+  };
+  c.state.focusSettings = { rewardXP: 5, rewardAttribute: 'Разум' };
+
+  assert.equal(c.focusAwardDueBlocks(), 2);
+  assert.equal(c.state.xp, 10);
+  assert.equal(c.state.journal.length, 2);
+  assert.deepEqual(c.state.journal.map(x => x.extra), ['Разум', 'Разум']);
+  assert.equal(c.focusAwardDueBlocks(), 0);
+  assert.equal(c.state.journal.length, 2);
+});
+
+test('блок фокуса при исчерпанном лимите сохраняется как бонус с исходным атрибутом', () => {
+  const c = makeContext();
+  c.state.settings.dailyLimit = 5;
+  c.state.focusTimer = {
+    sessionId: 'session-2', elapsedFocusSeconds: 1200, rewardedBlocks: 0
+  };
+  c.state.focusSettings = { rewardXP: 5, rewardAttribute: 'Разум' };
+
+  assert.equal(c.focusAwardDueBlocks(), 2);
+  assert.equal(c.state.xp, 5);
+  assert.equal(c.state.pendingBonuses.length, 1);
+  assert.equal(c.state.pendingBonuses[0].xp, 5);
+  assert.equal(c.state.pendingBonuses[0].attribute, 'Разум');
+  assert.equal(c.focusAwardDueBlocks(), 0);
+  assert.equal(c.state.pendingBonuses.length, 1);
+});
