@@ -22,7 +22,7 @@ function functionSource(name) {
 }
 
 function loadFocusFunctions(context) {
-  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode'];
+  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode', 'saveFocusSettings'];
   vm.runInNewContext(names.map(functionSource).join('\n'), context);
   return context;
 }
@@ -371,4 +371,65 @@ test('смена режима на паузе сохраняет накопле�
   assert.equal(c.state.focusTimer.remainingSeconds, 3000);
   assert.equal(c.state.focusTimer.elapsedFocusSeconds, 900);
   assert.equal(c.state.focusTimer.rewardedBlocks, 1);
+});
+
+test('сохранение фокуса применяет длительности всех режимов, XP и атрибут', () => {
+  const c = loadFocusFunctions(makeContext());
+  const fields = {
+    'focus-name-short': { value: 'Спринт' },
+    'focus-minutes-short': { value: '18' },
+    'rest-minutes-short': { value: '4' },
+    'focus-name-deep': { value: 'Учёба' },
+    'focus-minutes-deep': { value: '55' },
+    'rest-minutes-deep': { value: '12' },
+    'focus-name-long': { value: 'Большая задача' },
+    'focus-minutes-long': { value: '100' },
+    'rest-minutes-long': { value: '20' },
+    'focus-reward-xp': { value: '8' },
+    'focus-reward-attribute': { value: 'Разум' }
+  };
+  c.$ = id => fields[id] || { value: '' };
+  c.renderFocus = () => {};
+  c.updateFocusHomeSummary = () => {};
+  c.toast = () => {};
+  c.state.settings = { focus: 25 };
+  c.state.focusModes = c.normalizeFocusModes(null, 25);
+  c.state.focusSettings = { rewardXP: 5, rewardAttribute: 'Общее' };
+  c.state.focusTimer = {
+    sessionId: 'settings-1', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 1500, elapsedFocusSeconds: 0,
+    rewardedBlocks: 0, running: false
+  };
+
+  c.saveFocusSettings();
+
+  assert.deepEqual(JSON.parse(JSON.stringify(c.state.focusModes.map(x => [
+    x.name, x.focusMinutes, x.restMinutes
+  ]))), [
+    ['Спринт', 18, 4],
+    ['Учёба', 55, 12],
+    ['Большая задача', 100, 20]
+  ]);
+  assert.equal(c.state.focusSettings.rewardXP, 8);
+  assert.equal(c.state.focusSettings.rewardAttribute, 'Разум');
+  assert.equal(c.state.focusTimer.remainingSeconds, 1080);
+});
+
+test('нельзя менять профиль во время активного таймера', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusModes = c.normalizeFocusModes(null, 25);
+  c.state.focusTimer = {
+    sessionId: 'switch-running', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 900, elapsedFocusSeconds: 300,
+    rewardedBlocks: 0, running: true
+  };
+  c.renderFocus = () => {};
+  c.updateFocusHomeSummary = () => {};
+  c.toast = () => {};
+
+  c.focusSwitchMode('long');
+
+  assert.equal(c.state.focusTimer.selectedMode, 'short');
+  assert.equal(c.state.focusTimer.remainingSeconds, 900);
+  assert.equal(c.state.focusTimer.running, true);
 });
