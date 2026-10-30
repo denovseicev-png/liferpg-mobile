@@ -173,7 +173,8 @@ function normalize(s){
  Object.keys(d).forEach(k=>{if(Array.isArray(d[k]))d[k]=Array.isArray(s[k])?s[k]:[];else if(k==='settings')d.settings=Object.assign({},d.settings,s.settings||{});else if(k==='timer'||k==='focusSettings'||k==='focusTimer')d[k]=Object.assign({},d[k],s[k]||{});else if(s[k]!==undefined)d[k]=s[k]});
  d.focusModes=normalizeFocusModes(s.focusModes, s.settings&&s.settings.focus);
  d.focusSettings.rewardXP=num(d.focusSettings.rewardXP,0,500,5);
- d.focusSettings.rewardAttribute=String(d.focusSettings.rewardAttribute||'Разум');
+ const focusAttributes=['Разум','Общее','Здоровье','Учёба','Дисциплина','Навыки','Отношения'];
+ d.focusSettings.rewardAttribute=focusAttributes.includes(d.focusSettings.rewardAttribute)?d.focusSettings.rewardAttribute:'Разум';
  const focusMode=d.focusModes.find(x=>x.id===d.focusTimer.selectedMode)||d.focusModes[0];
  if(!s.focusTimer||s.focusTimer.remainingSeconds===undefined)d.focusTimer.remainingSeconds=(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60;
  d.focusTimer.selectedMode=focusMode.id;
