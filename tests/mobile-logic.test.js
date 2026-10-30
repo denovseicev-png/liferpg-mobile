@@ -433,3 +433,21 @@ test('нельзя менять профиль во время активног�
   assert.equal(c.state.focusTimer.remainingSeconds, 900);
   assert.equal(c.state.focusTimer.running, true);
 });
+
+test('источник уже начисленного блока не позволяет повторно выдать тот же XP', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusTimer = {
+    sessionId: 'duplicate-1', elapsedFocusSeconds: 600, rewardedBlocks: 0
+  };
+  c.state.focusSettings = { rewardXP: 5, rewardAttribute: 'Разум' };
+  c.state.journal.push({
+    id: 'already-rewarded', date: '2026-10-29',
+    title: 'Фокус · 10 минут', type: 'focus', xp: 5,
+    extra: 'Разум', sourceId: 'focus-duplicate-1-1'
+  });
+
+  assert.equal(c.focusAwardDueBlocks(), 1);
+  assert.equal(c.state.journal.length, 1);
+  assert.equal(c.state.pendingBonuses.length, 0);
+  assert.equal(c.state.focusTimer.rewardedBlocks, 1);
+});
