@@ -442,6 +442,15 @@ function focusStartPause(){
 function focusTick(){
  const timer=state.focusTimer;
  if(!timer.running)return;
+ // Сохраняем только данные, которые меняет один тик. Если localStorage
+ // переполнен или недоступен, возвращаем состояние до начисления награды.
+ const previous={
+  timer:Object.assign({},timer),
+  xp:state.xp,total:state.total,
+  journal:state.journal.slice(),
+  pendingBonuses:state.pendingBonuses.slice(),
+  achievements:state.achievements.slice()
+ };
  timer.remainingSeconds=Math.max(0,timer.remainingSeconds-1);
  if(timer.phase==='focus'){
   timer.elapsedFocusSeconds=Math.min(864000,timer.elapsedFocusSeconds+1);
@@ -455,8 +464,14 @@ function focusTick(){
   toast(timer.phase==='rest'?'Отрезок фокуса завершён. Время отдохнуть.':'Перерыв окончен. Готовься к следующему фокусу.');
  }
  if(!save()){
-  timer.running=false;clearInterval(focusInterval);focusInterval=null;
-  updateFocusTimerUI();return;
+  state.focusTimer=previous.timer;
+  state.focusTimer.running=false;
+  state.xp=previous.xp;state.total=previous.total;
+  state.journal=previous.journal;
+  state.pendingBonuses=previous.pendingBonuses;
+  state.achievements=previous.achievements;
+  clearInterval(focusInterval);focusInterval=null;
+  updateFocusTimerUI();updateFocusHomeSummary();return;
  }
  updateFocusTimerUI();updateFocusHomeSummary();
 }
