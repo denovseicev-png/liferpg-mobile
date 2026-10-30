@@ -109,25 +109,6 @@ function normalizeFocusModes(modes,legacyMinutes){
 function focusBlocksToAward(elapsedSeconds,rewardedBlocks){
  return Math.max(0,Math.floor(Math.max(0,Number(elapsedSeconds)||0)/600)-Math.max(0,Math.floor(Number(rewardedBlocks)||0)));
 }
-function focusAwardDueBlocks(){
- const timer=state.focusTimer,settings=state.focusSettings;
- const due=focusBlocksToAward(timer.elapsedFocusSeconds,timer.rewardedBlocks);
- for(let i=0;i<due;i++){
-  const block=timer.rewardedBlocks+1;
-  const xp=num(settings.rewardXP,0,500,5);
-  const attribute=String(settings.rewardAttribute||'Разум');
-  const title='Фокус · 10 минут';
-  const sourceId='focus-'+timer.sessionId+'-'+block;
-  if(xp>0&&!giveXP(xp,title,'focus',attribute,sourceId)){
-   if(!state.pendingBonuses.some(x=>x.sourceId===sourceId)){
-    state.pendingBonuses.push({id:uid(),xp,note:title,attribute,date:today(),sourceId});
-   }
-  }
-  timer.rewardedBlocks=block;
- }
- return due;
-}
-
 const dateLabel=d=>{if(!d)return '';const x=new Date(d+'T12:00:00');return isNaN(x)?d:x.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})};
 const defaults=()=>({version:VERSION,created:today(),xp:0,total:0,coins:0,quests:[],habits:[],goals:[],grades:[],exams:[],topics:[],cards:[],journal:[],rewards:[],loans:[],bankHistory:[],diary:[],notes:[],templates:[],freezes:[],pendingBonuses:[],miniTasks:[],studySessions:[],challenges:[],checkins:[],reviews:[],achievements:[],focusModes:normalizeFocusModes(),focusSettings:{rewardXP:5,rewardAttribute:'Разум'},focusTimer:{sessionId:uid(),selectedMode:'short',phase:'focus',remainingSeconds:1500,elapsedFocusSeconds:0,rewardedBlocks:0,running:false},settings:{focus:25,daily:100,cap:0,dailyLimit:800,weeklyLimit:6000,heroClass:'Стратег',name:''},timer:{mode:'focus',seconds:1500,running:false}});
 let state=defaults(),toastTimer=null,timerInterval=null,reviewShown=false,hasSavedState=false;
@@ -163,6 +144,24 @@ function xpWeek(){const start=weekStart();return state.journal.filter(x=>x.date>
 function giveXP(amount,title,type,attribute,sourceId){amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return true;if(type==='card'){const cardXP=state.journal.filter(j=>j.date===today()&&j.type==='card').reduce((s,j)=>s+Math.max(0,j.xp||0),0);if(cardXP+amount>40){toast('Достигнут лимит 40 XP за карточки на сегодня.');return false}}const cap=num(state.settings.cap,0,5000,250),dayLimit=num(state.settings.dailyLimit,1,10000,800),weekLimit=num(state.settings.weeklyLimit,1,50000,6000);if(cap>0&&xpToday()+amount>cap){toast('Достигнут мягкий дневной лимит XP. Можно продолжить без награды.');return false}if(xpToday()+amount>dayLimit){toast('Достигнут дневной лимит XP. Награда не начислена.');return false}if(xpWeek()+amount>weekLimit){toast('Достигнут недельный лимит XP. Награда не начислена.');return false}state.xp+=amount;state.total+=amount;journal(type||'xp',title,amount,attribute||'',sourceId);checkAchievements();return true}
 function spendCoins(amount,title){amount=Math.floor(Number(amount)||0);if(amount<0||state.coins<amount)return false;state.coins-=amount;state.bankHistory.unshift({id:uid(),date:today(),title:title,amount:-amount});return true}
 function awardCoins(amount,title,sourceId){amount=Math.max(0,Math.floor(Number(amount)||0));state.coins+=amount;const entry={id:uid(),date:today(),title:title,amount:amount};if(sourceId)entry.sourceId=String(sourceId);state.bankHistory.unshift(entry);return entry}
+function focusAwardDueBlocks(){
+ const timer=state.focusTimer,settings=state.focusSettings;
+ const due=focusBlocksToAward(timer.elapsedFocusSeconds,timer.rewardedBlocks);
+ for(let i=0;i<due;i++){
+  const block=timer.rewardedBlocks+1;
+  const xp=num(settings.rewardXP,0,500,5);
+  const attribute=String(settings.rewardAttribute||'Разум');
+  const title='Фокус · 10 минут';
+  const sourceId='focus-'+timer.sessionId+'-'+block;
+  if(xp>0&&!giveXP(xp,title,'focus',attribute,sourceId)){
+   if(!state.pendingBonuses.some(x=>x.sourceId===sourceId)){
+    state.pendingBonuses.push({id:uid(),xp,note:title,attribute,date:today(),sourceId});
+   }
+  }
+  timer.rewardedBlocks=block;
+ }
+ return due;
+}
 function checkAchievements(){const checks=[['first_quest','Первый шаг','Выполни первый квест',state.quests.some(q=>q.doneDate)],['ten_quests','Десять побед','Выполни 10 квестов',state.quests.filter(q=>q.doneDate).length>=10],['xp_500','Опыт копится','Набери 500 XP',state.total>=500],['habit_7','Неделя регулярности','Отметь привычку 7 раз',state.habits.some(h=>h.checks.length>=7)],['first_goal','Большой ориентир','Создай первую цель',state.goals.length>0],['first_review','Осознанность','Заполни недельный обзор',state.reviews.length>0]];checks.forEach(a=>{if(a[3]&&!state.achievements.some(x=>x.id===a[0])){state.achievements.push({id:a[0],title:a[1],description:a[2],date:today()});toast('Новое достижение: '+a[1])}})}
 function renderItem(item,kind){const done=kind==='habit'?item.checks.includes(today()):kind==='quest'?item.doneDate===today():!!item.done;const title=item.title||item.name||'';let meta='',right='';
  if(kind==='quest'){meta=(item.attribute||'Общее')+' · '+(item.priority||'Обычный')+(item.due?' · '+dateLabel(item.due):'');right='<span class="xp">+'+item.xp+' XP</span>'}
