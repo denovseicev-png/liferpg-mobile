@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const html = fs.readFileSync('index.html', 'utf8');
+const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 
 function functionSource(name) {
   const start = html.indexOf('function ' + name + '(');
@@ -646,4 +647,9 @@ test('АТЛАС откатывает создание записи, если л
 
   assert.equal(c.state.quests.length, 0);
   assert.equal(c.state.settings.atlasHistory.length, 0);
+});
+
+test('Service Worker обновляет кеш PWA для установки АТЛАСА', () => {
+  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v16'/);
+  assert.match(serviceWorker, /'\.\/index\.html'/);
 });
