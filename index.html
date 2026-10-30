@@ -176,7 +176,15 @@ function normalize(s){
  const focusAttributes=['Разум','Общее','Здоровье','Учёба','Дисциплина','Навыки','Отношения'];
  d.focusSettings.rewardAttribute=focusAttributes.includes(d.focusSettings.rewardAttribute)?d.focusSettings.rewardAttribute:'Разум';
  const focusMode=d.focusModes.find(x=>x.id===d.focusTimer.selectedMode)||d.focusModes[0];
- if(!s.focusTimer||s.focusTimer.remainingSeconds===undefined)d.focusTimer.remainingSeconds=(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60;
+ if(!s.focusTimer){
+  d.focusTimer.phase=s.timer&&s.timer.mode==='break'?'rest':'focus';
+  const legacySeconds=s.timer&&s.timer.seconds;
+  d.focusTimer.remainingSeconds=legacySeconds===undefined
+   ?(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60
+   :num(legacySeconds,0,14400,(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60);
+ }else if(d.focusTimer.remainingSeconds===undefined){
+  d.focusTimer.remainingSeconds=(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60;
+ }
  d.focusTimer.selectedMode=focusMode.id;
  d.focusTimer.phase=d.focusTimer.phase==='rest'?'rest':'focus';
  d.focusTimer.remainingSeconds=num(d.focusTimer.remainingSeconds,0,14400,(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60);
