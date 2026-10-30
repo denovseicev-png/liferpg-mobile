@@ -79,7 +79,10 @@ jobs:
               "function renderCalendar", "function renderNotes",
               "function renderSkills", "function renderChallenges",
               "function renderReviews", "function renderBank",
-              "function toggle", "function saveSettings"
+              "function toggle", "function saveSettings",
+              "function normalizeFocusModes", "function focusAwardDueBlocks",
+              "function focusTick", "function focusStartPause",
+              "function focusReset", "function saveFocusSettings"
           ):
               if feature not in html:
                   raise SystemExit("Не найдена ключевая функция: " + feature)
@@ -89,7 +92,8 @@ jobs:
               "topics", "cards", "journal", "rewards", "loans",
               "diary", "notes", "templates", "freezes",
               "pendingBonuses", "miniTasks", "studySessions", "challenges",
-              "checkins", "reviews", "achievements"
+              "checkins", "reviews", "achievements",
+              "focusModes", "focusSettings", "focusTimer"
           ):
               if not re.search(r"\b" + re.escape(state_field) + r"\s*:", html):
                   raise SystemExit("Нет поля состояния: " + state_field)
