@@ -390,13 +390,18 @@ function renderAtlas(){
 }
 function atlasHandleInput(value){
  const input=String(value||'').trim().slice(0,300);if(!input)return;
+ const previous=JSON.parse(JSON.stringify(state));
  const history=state.settings.atlasHistory||(state.settings.atlasHistory=[]);
  history.push({role:'user',text:input,time:new Date().toISOString()});
  let answer;
- try{answer=atlasCommand(input)}catch(error){answer='Не удалось выполнить команду. Данные не следует менять повторно; проверь список и попробуй уточнить запрос.'}
+ try{answer=atlasCommand(input)}catch(error){answer='Не удалось выполнить команду. Проверь список и попробуй уточнить запрос.'}
  history.push({role:'assistant',text:String(answer),time:new Date().toISOString()});
  if(history.length>80)history.splice(0,history.length-80);
- save();renderAtlas();
+ if(!save()){
+  state=previous;save();render();toast('Команда не сохранена. Изменения отменены.');
+  return;
+ }
+ renderAtlas();
 }
 
 function showPage(page){if(page==='checkin')renderCheckin();if(page==='focus')renderFocus();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const el=$('page-'+page);if(el)el.classList.add('active');document.querySelectorAll('[data-menu-page]').forEach(b=>{const active=b.dataset.menuPage===page;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});window.scrollTo({top:0,behavior:'smooth'})}
