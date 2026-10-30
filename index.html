@@ -88,12 +88,63 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,min,max,def)=>Math.max(min,Math.min(max,Number.isFinite(Number(v))?Number(v):def));
+
+function normalizeFocusModes(modes,legacyMinutes){
+ const base=[
+  {id:'short',name:'Короткий',focusMinutes:25,restMinutes:5},
+  {id:'deep',name:'Глубокий',focusMinutes:50,restMinutes:10},
+  {id:'long',name:'Длинный',focusMinutes:90,restMinutes:15}
+ ];
+ const old=num(legacyMinutes,1,240,25);
+ return base.map((preset,index)=>{
+  const item=Array.isArray(modes)?modes[index]:null;
+  return {
+   id:preset.id,
+   name:String(item&&item.name||preset.name).trim().slice(0,30)||preset.name,
+   focusMinutes:num(item&&item.focusMinutes,1,240,index===0?old:preset.focusMinutes),
+   restMinutes:num(item&&item.restMinutes,1,120,preset.restMinutes)
+  };
+ });
+}
+function focusBlocksToAward(elapsedSeconds,rewardedBlocks){
+ return Math.max(0,Math.floor(Math.max(0,Number(elapsedSeconds)||0)/600)-Math.max(0,Math.floor(Number(rewardedBlocks)||0)));
+}
+function focusAwardDueBlocks(){
+ const timer=state.focusTimer,settings=state.focusSettings;
+ const due=focusBlocksToAward(timer.elapsedFocusSeconds,timer.rewardedBlocks);
+ for(let i=0;i<due;i++){
+  const block=timer.rewardedBlocks+1;
+  const xp=num(settings.rewardXP,0,500,5);
+  const attribute=String(settings.rewardAttribute||'Разум');
+  const title='Фокус · 10 минут';
+  const sourceId='focus-'+timer.sessionId+'-'+block;
+  if(xp>0&&!giveXP(xp,title,'focus',attribute,sourceId)){
+   if(!state.pendingBonuses.some(x=>x.sourceId===sourceId)){
+    state.pendingBonuses.push({id:uid(),xp,note:title,attribute,date:today(),sourceId});
+   }
+  }
+  timer.rewardedBlocks=block;
+ }
+ return due;
+}
+
 const dateLabel=d=>{if(!d)return '';const x=new Date(d+'T12:00:00');return isNaN(x)?d:x.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})};
-const defaults=()=>({version:VERSION,created:today(),xp:0,total:0,coins:0,quests:[],habits:[],goals:[],grades:[],exams:[],topics:[],cards:[],journal:[],rewards:[],loans:[],bankHistory:[],diary:[],notes:[],templates:[],freezes:[],pendingBonuses:[],miniTasks:[],studySessions:[],challenges:[],checkins:[],reviews:[],achievements:[],settings:{focus:25,daily:100,cap:0,dailyLimit:800,weeklyLimit:6000,heroClass:'Стратег',name:''},timer:{mode:'focus',seconds:1500,running:false}});
+const defaults=()=>({version:VERSION,created:today(),xp:0,total:0,coins:0,quests:[],habits:[],goals:[],grades:[],exams:[],topics:[],cards:[],journal:[],rewards:[],loans:[],bankHistory:[],diary:[],notes:[],templates:[],freezes:[],pendingBonuses:[],miniTasks:[],studySessions:[],challenges:[],checkins:[],reviews:[],achievements:[],focusModes:normalizeFocusModes(),focusSettings:{rewardXP:5,rewardAttribute:'Разум'},focusTimer:{sessionId:uid(),selectedMode:'short',phase:'focus',remainingSeconds:1500,elapsedFocusSeconds:0,rewardedBlocks:0,running:false},settings:{focus:25,daily:100,cap:0,dailyLimit:800,weeklyLimit:6000,heroClass:'Стратег',name:''},timer:{mode:'focus',seconds:1500,running:false}});
 let state=defaults(),toastTimer=null,timerInterval=null,reviewShown=false,hasSavedState=false;
 function normalize(s){
  const d=defaults();if(!s||typeof s!=='object')return d;
- Object.keys(d).forEach(k=>{if(Array.isArray(d[k]))d[k]=Array.isArray(s[k])?s[k]:[];else if(k==='settings')d.settings=Object.assign({},d.settings,s.settings||{});else if(k==='timer')d.timer=Object.assign({},d.timer,s.timer||{});else if(s[k]!==undefined)d[k]=s[k]});
+ Object.keys(d).forEach(k=>{if(Array.isArray(d[k]))d[k]=Array.isArray(s[k])?s[k]:[];else if(k==='settings')d.settings=Object.assign({},d.settings,s.settings||{});else if(k==='timer'||k==='focusSettings'||k==='focusTimer')d[k]=Object.assign({},d[k],s[k]||{});else if(s[k]!==undefined)d[k]=s[k]});
+ d.focusModes=normalizeFocusModes(s.focusModes, s.settings&&s.settings.focus);
+ d.focusSettings.rewardXP=num(d.focusSettings.rewardXP,0,500,5);
+ d.focusSettings.rewardAttribute=String(d.focusSettings.rewardAttribute||'Разум');
+ const focusMode=d.focusModes.find(x=>x.id===d.focusTimer.selectedMode)||d.focusModes[0];
+ d.focusTimer.selectedMode=focusMode.id;
+ d.focusTimer.phase=d.focusTimer.phase==='rest'?'rest':'focus';
+ d.focusTimer.remainingSeconds=num(d.focusTimer.remainingSeconds,0,14400,(d.focusTimer.phase==='rest'?focusMode.restMinutes:focusMode.focusMinutes)*60);
+ d.focusTimer.elapsedFocusSeconds=num(d.focusTimer.elapsedFocusSeconds,0,864000,0);
+ d.focusTimer.rewardedBlocks=num(d.focusTimer.rewardedBlocks,0,1440,0);
+ d.focusTimer.sessionId=String(d.focusTimer.sessionId||uid());
+ d.focusTimer.running=false;
  // Мягкая миграция раннего прототипа: сохраняем созданные пользователем квесты и XP.
  if(Array.isArray(s.quests))d.quests=s.quests.map(q=>({id:String(q.id||uid()),title:String(q.title||q.t||'Квест'),xp:num(q.xp,1,500,10),done:!!q.done,doneDate:q.doneDate||(q.done?today():''),due:q.due||today(),attribute:q.attribute||'Общее',priority:q.priority||'Обычный',note:q.note||'',period:q.period||'once',weekdays:q.weekdays||'',monthlyDay:q.monthlyDay||null}));
  if(Array.isArray(s.habits))d.habits=s.habits.map(h=>({id:String(h.id||uid()),title:String(h.title||h.t||'Привычка'),xp:num(h.xp,0,100,5),checks:Array.isArray(h.checks)?h.checks:(h.done?[today()]:[]),note:h.note||''}));
