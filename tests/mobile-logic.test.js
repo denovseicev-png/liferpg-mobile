@@ -14,7 +14,7 @@ function functionSource(name) {
 
 function loadFocusFunctions(context) {
   const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks'];
-  vm.runInNewContext(names.map(functionSource).join('\\n'), context);
+  vm.runInNewContext(names.map(functionSource).join('\n'), context);
   return context;
 }
 
