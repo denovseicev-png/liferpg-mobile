@@ -364,6 +364,7 @@ function updateFocusTimerUI(){
  const secondsToNext=600-(timer.elapsedFocusSeconds%600);
  $('focus-next-reward').textContent=String(Math.floor(secondsToNext/60)).padStart(2,'0')+':'+String(secondsToNext%60).padStart(2,'0');
  $('focus-start').textContent=timer.running?'Пауза':timer.phase==='focus'?'Начать фокус':'Начать отдых';
+ document.querySelectorAll('[data-focus-mode]').forEach(button=>{button.disabled=timer.running;button.classList.toggle('active',button.dataset.focusMode===timer.selectedMode)});
  $('focus-reset').disabled=timer.running;
  $('focus-mode-title-'+mode.id).textContent=mode.name;
 }
