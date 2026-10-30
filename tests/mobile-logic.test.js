@@ -8,8 +8,17 @@ const html = fs.readFileSync('index.html', 'utf8');
 function functionSource(name) {
   const start = html.indexOf('function ' + name + '(');
   assert.notEqual(start, -1, 'Функция ' + name + ' должна существовать');
-  const end = html.indexOf('\nfunction ', start + 1);
-  return html.slice(start, end === -1 ? html.indexOf('</script>', start) : end);
+  const open = html.indexOf('{', start);
+  assert.notEqual(open, -1, 'Тело функции ' + name + ' найдено');
+  let depth = 0;
+  for (let i = open; i < html.length; i++) {
+    if (html[i] === '{') depth++;
+    if (html[i] === '}') {
+      depth--;
+      if (depth === 0) return html.slice(start, i + 1);
+    }
+  }
+  assert.fail('Функция ' + name + ' не закрыта');
 }
 
 function loadFocusFunctions(context) {
