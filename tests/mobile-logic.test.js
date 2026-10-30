@@ -130,3 +130,21 @@ test('при переходе к разделу навигация прокру�
     /nav\.scrollTo\(\{left:Math\.max\(0,active\.offsetLeft-\(nav\.clientWidth-active\.offsetWidth\)\/2\),behavior:'smooth'\}\)/
   );
 });
+
+test('нижнее меню прокручивается от первого раздела к последнему', () => {
+  const navRule = html.match(/\.nav\{[^}]+\}/);
+  const buttonRule = html.match(/\.nav button\{[^}]+\}/);
+  assert.ok(navRule, 'CSS нижнего меню найден');
+  assert.ok(buttonRule, 'CSS кнопок меню найден');
+  assert.match(navRule[0], /justify-content:flex-start/);
+  assert.match(navRule[0], /overflow-x:auto/);
+  assert.match(navRule[0], /-webkit-overflow-scrolling:touch/);
+  assert.match(buttonRule[0], /flex:0 0 76px/);
+  assert.doesNotMatch(navRule[0], /justify-content:center/);
+});
+
+test('активная вкладка прокручивается в видимую область по фактическим координатам', () => {
+  assert.match(html, /active\.getBoundingClientRect\(\)/);
+  assert.match(html, /nav\.getBoundingClientRect\(\)/);
+  assert.match(html, /nav\.scrollWidth-nav\.clientWidth/);
+});
