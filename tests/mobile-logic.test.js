@@ -125,10 +125,9 @@ test('квесты доступны напрямую из настроек и с
 });
 
 test('при переходе к разделу навигация прокручивается к активной вкладке', () => {
-  assert.match(
-    html,
-    /nav\.scrollTo\(\{left:Math\.max\(0,active\.offsetLeft-\(nav\.clientWidth-active\.offsetWidth\)\/2\),behavior:'smooth'\}\)/
-  );
+  assert.match(html, /active\.getBoundingClientRect\(\)/);
+  assert.match(html, /nav\.getBoundingClientRect\(\)/);
+  assert.match(html, /nav\.scrollTo\(\{left:Math\.max\(0,Math\.min\(nav\.scrollWidth-nav\.clientWidth,left\)\),behavior:'smooth'\}\)/);
 });
 
 test('нижнее меню прокручивается от первого раздела к последнему', () => {
