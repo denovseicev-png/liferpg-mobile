@@ -22,7 +22,7 @@ function functionSource(name) {
 }
 
 function loadFocusFunctions(context) {
-  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode', 'saveFocusSettings'];
+  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode', 'saveFocusSettings', 'defaults', 'normalize'];
   vm.runInNewContext(names.map(functionSource).join('\n'), context);
   return context;
 }
@@ -38,6 +38,7 @@ function makeContext() {
   };
   const context = {
     state,
+    VERSION: 3,
     today: () => today,
     uid: () => 'test-' + (++id),
     num: (value, min, max, fallback) => {
@@ -450,4 +451,17 @@ test('источник уже начисленного блока не позв�
   assert.equal(c.state.journal.length, 1);
   assert.equal(c.state.pendingBonuses.length, 0);
   assert.equal(c.state.focusTimer.rewardedBlocks, 1);
+});
+
+test('миграция переносит оставшееся время старого фокуса и отдыха', () => {
+  const c = loadFocusFunctions(makeContext());
+  const focusState = c.normalize({
+    settings: { focus: 40 },
+    timer: { mode: 'break', seconds: 125 }
+  });
+
+  assert.equal(focusState.focusModes[0].focusMinutes, 40);
+  assert.equal(focusState.focusTimer.phase, 'rest');
+  assert.equal(focusState.focusTimer.remainingSeconds, 125);
+  assert.equal(focusState.focusTimer.running, false);
 });
