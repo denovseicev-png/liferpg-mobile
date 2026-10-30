@@ -516,7 +516,7 @@ function loadAtlasFunctions(context) {
     .filter(x => x.date === context.today())
     .reduce((sum, x) => sum + Math.max(0, Number(x.xp) || 0), 0);
   vm.runInNewContext(
-    ['atlasNormalize', 'atlasCommand'].map(functionSource).join('\\n'),
+    ['atlasNormalize', 'atlasCommand'].map(functionSource).join('\n'),
     context
   );
   return context;
