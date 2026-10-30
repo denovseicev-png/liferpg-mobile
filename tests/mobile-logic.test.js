@@ -160,13 +160,13 @@ test('панель меню имеет размытый затемнённый �
   assert.match(css[0], /background:/);
 });
 
-test('меню Все содержит все 12 разделов в правильном порядке', () => {
+test('меню Все содержит все 13 разделов в правильном порядке', () => {
   const overlay = html.match(/id="section-menu-overlay"[\s\S]*?id="toast"/);
   assert.ok(overlay, 'оверлей меню найден');
   const pages = [...overlay[0].matchAll(/data-menu-page="([^"]+)"/g)].map(x => x[1]);
   assert.deepEqual(pages, [
     'home', 'search', 'quests', 'habits', 'goals', 'study',
-    'bank', 'insights', 'calendar', 'notes', 'skills', 'settings'
+    'focus', 'bank', 'insights', 'calendar', 'notes', 'skills', 'settings'
   ]);
   assert.match(overlay[0], /role="dialog"/);
 });
@@ -233,4 +233,25 @@ test('блок фокуса при исчерпанном лимите сохр�
   assert.equal(c.state.pendingBonuses[0].attribute, 'Разум');
   assert.equal(c.focusAwardDueBlocks(), 0);
   assert.equal(c.state.pendingBonuses.length, 1);
+});
+
+test('фокус вынесен в отдельный экран и удалён с главной страницы', () => {
+  const home = html.match(/<div id="page-home"[\s\S]*?<div id="page-quests"/);
+  assert.ok(home, 'главная страница найдена');
+  assert.doesNotMatch(home[0], /id="timer"/);
+  assert.match(home[0], /data-open="focus"/);
+  assert.match(html, /<div id="page-focus" class="page">/);
+  assert.match(html, /data-menu-page="focus"/);
+});
+
+test('экран фокуса позволяет настроить три профиля и атрибут награды', () => {
+  for (const id of [
+    'focus-name-short', 'focus-minutes-short', 'rest-minutes-short',
+    'focus-name-deep', 'focus-minutes-deep', 'rest-minutes-deep',
+    'focus-name-long', 'focus-minutes-long', 'rest-minutes-long',
+    'focus-reward-xp', 'focus-reward-attribute', 'save-focus-settings'
+  ]) {
+    assert.match(html, new RegExp('id="' + id + '"'));
+  }
+  assert.match(html, /<option value="Разум">Разум<\/option>/);
 });
