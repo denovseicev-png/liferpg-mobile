@@ -476,3 +476,9 @@ test('миграция переносит оставшееся время ста
   assert.equal(focusState.focusTimer.remainingSeconds, 125);
   assert.equal(focusState.focusTimer.running, false);
 });
+
+test('настройки больше не обращаются к удалённому полю старого домашнего таймера', () => {
+  assert.doesNotMatch(html, /\$\('setting-focus'\)/);
+  assert.doesNotMatch(html, /if\(t\.id==='timer-start'\)/);
+  assert.doesNotMatch(html, /function updateTimerUI\(/);
+});
