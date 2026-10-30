@@ -173,7 +173,8 @@ test('меню Все содержит все 13 разделов в прави�
   const pages = [...overlay[0].matchAll(/data-menu-page="([^"]+)"/g)].map(x => x[1]);
   assert.deepEqual(pages, [
     'home', 'search', 'quests', 'habits', 'goals', 'study',
-    'focus', 'bank', 'insights', 'calendar', 'notes', 'skills', 'settings'
+    'focus', 'bank', 'insights', 'calendar', 'notes', 'skills',
+    'atlas', 'settings'
   ]);
   assert.match(overlay[0], /role="dialog"/);
 });
@@ -507,4 +508,116 @@ test('ошибка сохранения тика откатывает секун
   assert.equal(c.state.total, 0);
   assert.equal(c.state.journal.length, 0);
   assert.equal(c.state.pendingBonuses.length, 0);
+});
+
+
+function loadAtlasFunctions(context) {
+  context.xpToday = () => context.state.journal
+    .filter(x => x.date === context.today())
+    .reduce((sum, x) => sum + Math.max(0, Number(x.xp) || 0), 0);
+  vm.runInNewContext(
+    ['atlasNormalize', 'atlasCommand'].map(functionSource).join('\\n'),
+    context
+  );
+  return context;
+}
+
+test('АТЛАС создаёт квест с полями совместимой схемы LifeRPG', () => {
+  const c = loadAtlasFunctions(makeContext());
+  const answer = c.atlasCommand('Создай квест повторить 10 задач');
+
+  assert.match(answer, /Создал квест/);
+  assert.equal(c.state.quests.length, 1);
+  assert.equal(c.state.quests[0].title, 'повторить 10 задач');
+  assert.equal(c.state.quests[0].xp, 10);
+  assert.equal(c.state.quests[0].due, c.today());
+  assert.equal(c.state.quests[0].period, 'once');
+  assert.equal(c.state.xp, 0);
+});
+
+test('АТЛАС создаёт привычку и цель в формате мобильной версии', () => {
+  const c = loadAtlasFunctions(makeContext());
+  c.atlasCommand('создай привычку читать 10 минут');
+  c.atlasCommand('создай цель подготовиться к ОГЭ');
+
+  assert.equal(c.state.habits.length, 1);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.habits[0])),
+    {
+      id: 'test-1', title: 'читать 10 минут', xp: 5,
+      checks: [], note: ''
+    }
+  );
+  assert.equal(c.state.goals.length, 1);
+  assert.equal(c.state.goals[0].title, 'подготовиться к ОГЭ');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.goals[0].steps)),
+    []
+  );
+});
+
+test('АТЛАС не выполняет квест при неоднозначном совпадении', () => {
+  const c = loadAtlasFunctions(makeContext());
+  c.state.quests.push(
+    { id: 'quest-one', title: 'Повторить тему', xp: 10, due: c.today(), period: 'once', doneDate: '' },
+    { id: 'quest-two', title: 'Повторить тему', xp: 20, due: c.today(), period: 'once', doneDate: '' }
+  );
+
+  const answer = c.atlasCommand('выполни квест Повторить тему');
+
+  assert.match(answer, /несколько одинаковых/);
+  assert.equal(c.state.xp, 0);
+  assert.equal(c.state.quests.every(x => !x.doneDate), true);
+});
+
+test('АТЛАС выполняет однозначный квест только через штатную toggle и начисляет XP один раз', () => {
+  const c = loadAtlasFunctions(makeContext());
+  c.state.quests.push({
+    id: 'quest-unique', title: 'Повторить тему', xp: 10,
+    due: c.today(), period: 'once', doneDate: ''
+  });
+
+  const answer = c.atlasCommand('выполни квест Повторить тему');
+
+  assert.match(answer, /штатную систему LifeRPG/);
+  assert.equal(c.state.quests[0].doneDate, c.today());
+  assert.equal(c.state.xp, 10);
+  assert.equal(c.state.total, 10);
+  assert.equal(c.state.journal.filter(x => x.xp > 0).length, 1);
+});
+
+test('АТЛАС не обходит дневной лимит XP при выполнении квеста', () => {
+  const c = loadAtlasFunctions(makeContext());
+  c.state.settings.dailyLimit = 5;
+  c.state.quests.push({
+    id: 'quest-limited', title: 'Сложный квест', xp: 10,
+    due: c.today(), period: 'once', doneDate: ''
+  });
+
+  const answer = c.atlasCommand('выполни квест Сложный квест');
+
+  assert.match(answer, /лимит XP/);
+  assert.equal(c.state.quests[0].doneDate, '');
+  assert.equal(c.state.xp, 0);
+  assert.equal(c.state.journal.length, 0);
+});
+
+test('неизвестная команда АТЛАСА не меняет данные', () => {
+  const c = loadAtlasFunctions(makeContext());
+  const answer = c.atlasCommand('удали вообще всё');
+
+  assert.match(answer, /не понял команду/);
+  assert.equal(c.state.quests.length, 0);
+  assert.equal(c.state.habits.length, 0);
+  assert.equal(c.state.goals.length, 0);
+});
+
+test('история АТЛАСА хранится в локальных настройках и ограничена 80 сообщениями', () => {
+  assert.match(html, /atlasHistory:\[\]/);
+  assert.match(html, /d\.settings\.atlasHistory=d\.settings\.atlasHistory\.slice\(-80\)/);
+  assert.match(html, /localStorage\.setItem\(KEY,JSON\.stringify\(state\)\)/);
+  assert.match(html, /if\(history\.length>80\)history\.splice\(0,history\.length-80\)/);
+  assert.match(html, /id="atlas-form"/);
+  assert.match(html, /id="page-atlas"/);
+  assert.match(html, /data-menu-page="atlas"/);
 });
