@@ -167,7 +167,7 @@ function focusBlocksToAward(elapsedSeconds,rewardedBlocks){
 }
 const dateLabel=d=>{if(!d)return '';const x=new Date(d+'T12:00:00');return isNaN(x)?d:x.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})};
 const defaults=()=>({version:VERSION,created:today(),xp:0,total:0,coins:0,quests:[],habits:[],goals:[],grades:[],exams:[],topics:[],cards:[],journal:[],rewards:[],loans:[],bankHistory:[],diary:[],notes:[],templates:[],freezes:[],pendingBonuses:[],miniTasks:[],studySessions:[],challenges:[],checkins:[],reviews:[],achievements:[],focusModes:normalizeFocusModes(),focusSettings:{rewardXP:5,rewardAttribute:'Разум'},focusTimer:{sessionId:uid(),selectedMode:'short',phase:'focus',remainingSeconds:1500,elapsedFocusSeconds:0,rewardedBlocks:0,running:false},settings:{focus:25,daily:100,cap:0,dailyLimit:800,weeklyLimit:6000,heroClass:'Стратег',name:''},timer:{mode:'focus',seconds:1500,running:false}});
-let state=defaults(),toastTimer=null,timerInterval=null,reviewShown=false,hasSavedState=false;
+let state=defaults(),toastTimer=null,timerInterval=null,focusInterval=null,reviewShown=false,hasSavedState=false;
 function normalize(s){
  const d=defaults();if(!s||typeof s!=='object')return d;
  Object.keys(d).forEach(k=>{if(Array.isArray(d[k]))d[k]=Array.isArray(s[k])?s[k]:[];else if(k==='settings')d.settings=Object.assign({},d.settings,s.settings||{});else if(k==='timer'||k==='focusSettings'||k==='focusTimer')d[k]=Object.assign({},d[k],s[k]||{});else if(s[k]!==undefined)d[k]=s[k]});
@@ -403,7 +403,53 @@ function updateFocusHomeSummary(){
  el.textContent=mode.name+' · '+mode.focusMinutes+' минут фокуса / '+mode.restMinutes+' минут отдыха · '+state.focusTimer.rewardedBlocks+' наград за сессию';
 }
 
+function focusStartPause(){
+ const timer=state.focusTimer;
+ if(timer.running){
+  timer.running=false;
+  clearInterval(focusInterval);
+  focusInterval=null;
+  save();updateFocusTimerUI();updateFocusHomeSummary();
+  toast('Фокус поставлен на паузу');
+  return;
+ }
+ if(timer.remainingSeconds<=0)timer.remainingSeconds=focusDuration(timer.selectedMode,timer.phase);
+ timer.running=true;
+ save();updateFocusTimerUI();
+ clearInterval(focusInterval);
+ focusInterval=setInterval(focusTick,1000);
+}
+function focusTick(){
+ const timer=state.focusTimer;
+ if(!timer.running)return;
+ timer.remainingSeconds=Math.max(0,timer.remainingSeconds-1);
+ if(timer.phase==='focus'){
+  timer.elapsedFocusSeconds=Math.min(864000,timer.elapsedFocusSeconds+1);
+  focusAwardDueBlocks();
+ }
+ if(timer.remainingSeconds===0){
+  timer.running=false;
+  clearInterval(focusInterval);focusInterval=null;
+  timer.phase=timer.phase==='focus'?'rest':'focus';
+  timer.remainingSeconds=focusDuration(timer.selectedMode,timer.phase);
+  toast(timer.phase==='rest'?'Отрезок фокуса завершён. Время отдохнуть.':'Перерыв окончен. Готовься к следующему фокусу.');
+ }
+ save();updateFocusTimerUI();updateFocusHomeSummary();
+}
+function focusReset(){
+ const timer=state.focusTimer;
+ const remainder=timer.elapsedFocusSeconds%600;
+ if(remainder&&!confirm('В этой сессии накоплено '+Math.floor(remainder/60)+' мин '+(remainder%60)+' сек до следующей награды. Сбросить этот остаток? Уже начисленные XP останутся.'))return;
+ timer.running=false;clearInterval(focusInterval);focusInterval=null;
+ timer.sessionId=uid();timer.phase='focus';timer.elapsedFocusSeconds=0;timer.rewardedBlocks=0;
+ timer.remainingSeconds=focusDuration(timer.selectedMode,'focus');
+ save();updateFocusTimerUI();updateFocusHomeSummary();
+ toast('Начата новая фокус-сессия. Уже начисленные награды сохранены.');
+}
+
+
 function copySummary(){const s='LifeRPG Mobile\\nУровень: '+levelFor(state.xp).level+'\\nXP: '+state.total+'\\nXP сегодня: '+xpToday()+'\\nСерия: '+globalStreak()+' дней\\nКвестов выполнено: '+state.quests.filter(q=>q.doneDate).length+'\\nПривычек: '+state.habits.length+'\\nЦелей: '+state.goals.length+'\\n';if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(s).then(()=>toast('Сводка скопирована')).catch(()=>download('liferpg-summary.txt',s,'text/plain;charset=utf-8'));else download('liferpg-summary.txt',s,'text/plain;charset=utf-8')}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.focusTimer.running)focusStartPause()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('section-menu-overlay').hidden){e.preventDefault();closeSectionMenu()}});
 window.addEventListener('popstate',()=>{if(!$('section-menu-overlay').hidden)closeSectionMenu(true)});
 document.addEventListener('click',e=>{
