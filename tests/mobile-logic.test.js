@@ -186,7 +186,7 @@ test('три режима сохраняют настройки и мигрир�
     { id: 'two', name: 'Погружение', focusMinutes: 45, restMinutes: 9 }
   ], 30);
 
-  assert.deepEqual(modes.map(x => [x.name, x.focusMinutes, x.restMinutes]), [
+  assert.deepEqual(JSON.parse(JSON.stringify(modes.map(x => [x.name, x.focusMinutes, x.restMinutes]))), [
     ['Спринт', 15, 3],
     ['Погружение', 45, 9],
     ['Длинный', 90, 15]
