@@ -22,7 +22,7 @@ function functionSource(name) {
 }
 
 function loadFocusFunctions(context) {
-  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks'];
+  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset'];
   vm.runInNewContext(names.map(functionSource).join('\n'), context);
   return context;
 }
@@ -51,7 +51,13 @@ function makeContext() {
     checkAchievements: () => {},
     toast: () => {},
     save: () => {},
-    render: () => {}
+    render: () => {},
+    clearInterval: () => {},
+    setInterval: () => 1,
+    confirm: () => true,
+    focusInterval: null,
+    updateFocusTimerUI: () => {},
+    updateFocusHomeSummary: () => {}
   };
   const names = [
     'journal', 'giveXP', 'awardCoins', 'undoXP', 'removeCoins', 'toggle'
@@ -254,4 +260,91 @@ test('экран фокуса позволяет настроить три пр�
     assert.match(html, new RegExp('id="' + id + '"'));
   }
   assert.match(html, /<option value="Разум">Разум<\/option>/);
+});
+
+test('конец фокус-фазы выдаёт блок XP и переводит таймер на отдых без автозапуска', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusModes = [
+    { id: 'short', name: 'Короткий', focusMinutes: 25, restMinutes: 5 }
+  ];
+  c.state.focusSettings = { rewardXP: 4, rewardAttribute: 'Разум' };
+  c.state.focusTimer = {
+    sessionId: 'phase-1', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 1, elapsedFocusSeconds: 599,
+    rewardedBlocks: 0, running: true
+  };
+
+  c.focusTick();
+
+  assert.equal(c.state.focusTimer.running, false);
+  assert.equal(c.state.focusTimer.phase, 'rest');
+  assert.equal(c.state.focusTimer.remainingSeconds, 300);
+  assert.equal(c.state.focusTimer.elapsedFocusSeconds, 600);
+  assert.equal(c.state.xp, 4);
+  assert.equal(c.state.journal[0].extra, 'Разум');
+});
+
+test('окончание отдыха возвращает фокус, но не начисляет XP за отдых', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusModes = [
+    { id: 'short', name: 'Короткий', focusMinutes: 25, restMinutes: 5 }
+  ];
+  c.state.focusSettings = { rewardXP: 4, rewardAttribute: 'Разум' };
+  c.state.focusTimer = {
+    sessionId: 'phase-2', selectedMode: 'short', phase: 'rest',
+    remainingSeconds: 1, elapsedFocusSeconds: 600,
+    rewardedBlocks: 1, running: true
+  };
+
+  c.focusTick();
+
+  assert.equal(c.state.focusTimer.running, false);
+  assert.equal(c.state.focusTimer.phase, 'focus');
+  assert.equal(c.state.focusTimer.remainingSeconds, 1500);
+  assert.equal(c.state.xp, 0);
+});
+
+test('пауза и продолжение не сбрасывают неполный блок и не выдают повторный XP', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusTimer = {
+    sessionId: 'pause-1', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 400, elapsedFocusSeconds: 900,
+    rewardedBlocks: 1, running: true
+  };
+  c.state.focusSettings = { rewardXP: 5, rewardAttribute: 'Разум' };
+
+  c.focusStartPause();
+  assert.equal(c.state.focusTimer.running, false);
+  assert.equal(c.state.focusTimer.elapsedFocusSeconds, 900);
+  c.focusStartPause();
+  assert.equal(c.state.focusTimer.running, true);
+  assert.equal(c.focusAwardDueBlocks(), 0);
+  assert.equal(c.state.journal.length, 0);
+});
+
+test('сброс сессии не отменяет уже начисленный XP', () => {
+  const c = loadFocusFunctions(makeContext());
+  c.state.focusModes = [
+    { id: 'short', name: 'Короткий', focusMinutes: 25, restMinutes: 5 }
+  ];
+  c.state.focusTimer = {
+    sessionId: 'reset-1', selectedMode: 'short', phase: 'focus',
+    remainingSeconds: 100, elapsedFocusSeconds: 900,
+    rewardedBlocks: 1, running: false
+  };
+  c.state.xp = 5;
+  c.state.total = 5;
+  c.state.journal.push({
+    id: 'already-earned', date: '2026-10-29',
+    title: 'Фокус · 10 минут', type: 'focus', xp: 5, extra: 'Разум'
+  });
+
+  c.focusReset();
+
+  assert.equal(c.state.focusTimer.elapsedFocusSeconds, 0);
+  assert.equal(c.state.focusTimer.rewardedBlocks, 0);
+  assert.equal(c.state.focusTimer.phase, 'focus');
+  assert.equal(c.state.xp, 5);
+  assert.equal(c.state.total, 5);
+  assert.equal(c.state.journal.length, 1);
 });
