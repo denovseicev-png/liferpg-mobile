@@ -22,7 +22,7 @@ function functionSource(name) {
 }
 
 function loadFocusFunctions(context) {
-  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode', 'saveFocusSettings', 'defaults', 'normalize'];
+  const names = ['normalizeFocusModes', 'focusBlocksToAward', 'focusAwardDueBlocks', 'focusDuration', 'focusTick', 'focusStartPause', 'focusReset', 'focusSwitchMode', 'saveFocusSettings', 'normalize'];
   vm.runInNewContext(names.map(functionSource).join('\n'), context);
   return context;
 }
@@ -455,6 +455,17 @@ test('источник уже начисленного блока не позв�
 
 test('миграция переносит оставшееся время старого фокуса и отдыха', () => {
   const c = loadFocusFunctions(makeContext());
+  c.defaults = () => ({
+    settings: { focus: 25 }, timer: { mode: 'focus', seconds: 1500 },
+    focusModes: c.normalizeFocusModes(),
+    focusSettings: { rewardXP: 5, rewardAttribute: 'Разум' },
+    focusTimer: {
+      sessionId: 'legacy', selectedMode: 'short', phase: 'focus',
+      remainingSeconds: 1500, elapsedFocusSeconds: 0,
+      rewardedBlocks: 0, running: false
+    },
+    quests: [], habits: [], journal: [], xp: 0, total: 0
+  });
   const focusState = c.normalize({
     settings: { focus: 40 },
     timer: { mode: 'break', seconds: 125 }
