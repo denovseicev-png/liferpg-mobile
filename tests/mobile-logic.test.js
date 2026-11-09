@@ -693,6 +693,7 @@ test('порядок наград можно менять кнопками и о
 });
 
 test('удаление квеста не стирает уже начисленный XP и монеты из истории', () => {
+  let confirmDelete = null;
   const c = {
     state: {
       quests: [{ id: 'done-quest', title: 'Готово' }],
@@ -700,13 +701,15 @@ test('удаление квеста не стирает уже начислен�
       journal: [{ id: 'xp-1', xp: 10 }],
       bankHistory: [{ id: 'coin-1', amount: 1 }]
     },
-    confirm: () => true,
-    save: () => true,
-    render: () => {},
-    toast: () => {}
+    esc: value => String(value),
+    openModal: (title, body, submitText, callback) => {
+      confirmDelete = callback;
+    }
   };
   vm.runInNewContext(functionSource('deleteItem'), c);
   c.deleteItem('quest', 'done-quest');
+  assert.equal(c.state.quests.length, 1);
+  confirmDelete({});
   assert.equal(c.state.quests.length, 0);
   assert.equal(c.state.xp, 10);
   assert.equal(c.state.total, 10);
