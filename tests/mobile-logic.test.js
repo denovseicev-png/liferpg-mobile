@@ -650,7 +650,7 @@ test('АТЛАС откатывает создание записи, если л
 });
 
 test('Service Worker обновляет кеш PWA для установки АТЛАСА', () => {
-  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v18'/);
+  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v19'/);
   assert.match(serviceWorker, /'\.\/index\.html'/);
 });
 
@@ -768,7 +768,7 @@ test('при ошибке сохранения порядок наград во�
 });
 
 test('Service Worker обновляет кеш PWA для управления записями', () => {
-  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v18'/);
+  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v19'/);
   assert.match(serviceWorker, /'\.\/index\.html'/);
 });
 
