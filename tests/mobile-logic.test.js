@@ -653,3 +653,107 @@ test('Service Worker обновляет кеш PWA для установки А�
   assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v16'/);
   assert.match(serviceWorker, /'\.\/index\.html'/);
 });
+
+
+test('в пользовательских разделах доступны редактирование и удаление записей', () => {
+  for (const kind of [
+    'quest', 'habit', 'goal', 'reward', 'grade', 'exam',
+    'topic', 'card', 'studySession', 'miniTask', 'diary',
+    'review', 'freeze'
+  ]) {
+    assert.match(html, new RegExp('data-edit="' + kind + '"'));
+    assert.match(html, new RegExp('data-delete="' + kind + '"'));
+  }
+  assert.match(html, /function editRecord\(/);
+  assert.match(html, /function editGoalStep\(/);
+  assert.match(html, /data-step-edit=/);
+  assert.match(html, /data-step-delete=/);
+});
+
+test('порядок наград можно менять кнопками и он сохраняется в массиве', () => {
+  const c = {
+    state: { rewards: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] },
+    save: () => true,
+    render: () => {},
+    toast: () => {}
+  };
+  vm.runInNewContext(functionSource('moveReward'), c);
+  c.moveReward('c', -1);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.rewards.map(x => x.id))),
+    ['a', 'c', 'b']
+  );
+  c.moveReward('a', 1);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.rewards.map(x => x.id))),
+    ['c', 'a', 'b']
+  );
+});
+
+test('удаление квеста не стирает уже начисленный XP и монеты из истории', () => {
+  const c = {
+    state: {
+      quests: [{ id: 'done-quest', title: 'Готово' }],
+      xp: 10, total: 10, coins: 1,
+      journal: [{ id: 'xp-1', xp: 10 }],
+      bankHistory: [{ id: 'coin-1', amount: 1 }]
+    },
+    confirm: () => true,
+    save: () => true,
+    render: () => {},
+    toast: () => {}
+  };
+  vm.runInNewContext(functionSource('deleteItem'), c);
+  c.deleteItem('quest', 'done-quest');
+  assert.equal(c.state.quests.length, 0);
+  assert.equal(c.state.xp, 10);
+  assert.equal(c.state.total, 10);
+  assert.equal(c.state.coins, 1);
+  assert.equal(c.state.journal.length, 1);
+  assert.equal(c.state.bankHistory.length, 1);
+});
+
+test('удаление этапа не затрагивает соседние этапы', () => {
+  const c = {
+    state: {
+      goals: [{
+        id: 'goal-1',
+        steps: [
+          { title: 'Первый' },
+          { title: 'Второй' },
+          { title: 'Третий' }
+        ]
+      }]
+    },
+    confirm: () => true,
+    save: () => true,
+    render: () => {},
+    toast: () => {}
+  };
+  vm.runInNewContext(functionSource('deleteGoalStep'), c);
+  c.deleteGoalStep('goal-1', 1);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.goals[0].steps.map(x => x.title))),
+    ['Первый', 'Третий']
+  );
+});
+
+test('при ошибке сохранения порядок наград восстанавливается', () => {
+  const c = {
+    state: { rewards: [{ id: 'a' }, { id: 'b' }] },
+    save: () => false,
+    render: () => {},
+    toast: () => {}
+  };
+  vm.runInNewContext(functionSource('moveReward'), c);
+  c.moveReward('b', -1);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.rewards.map(x => x.id))),
+    ['a', 'b']
+  );
+});
+
+test('Service Worker обновляет кеш PWA для управления записями', () => {
+  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v17'/);
+  assert.match(serviceWorker, /'\.\/index\.html'/);
+});
