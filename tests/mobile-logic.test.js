@@ -657,8 +657,8 @@ test('Service Worker обновляет кеш PWA для установки А�
 
 test('в пользовательских разделах доступны редактирование и удаление записей', () => {
   for (const kind of [
-    'goal', 'reward', 'grade', 'exam', 'topic', 'card',
-    'studySession', 'miniTask', 'diary', 'review', 'freeze'
+    'goal', 'reward', 'grade', 'exam', 'topic', 'card', 'note',
+    'template', 'studySession', 'miniTask', 'diary', 'review', 'freeze'
   ]) {
     assert.match(html, new RegExp('data-edit="' + kind + '"'));
     assert.match(html, new RegExp('data-delete="' + kind + '"'));
@@ -667,8 +667,9 @@ test('в пользовательских разделах доступны ре
   assert.match(html, /data-delete="'\+kind/);
   assert.match(html, /function editRecord\(/);
   assert.match(html, /function editGoalStep\(/);
-  assert.match(html, /data-step-edit=/);
-  assert.match(html, /data-step-delete=/);
+  assert.match(html, /data-action="edit-goal-step"/);
+  assert.match(html, /data-action="delete-goal-step"/);
+  assert.match(html, /data-goal-id=/);
 });
 
 test('порядок наград можно менять кнопками и он сохраняется в массиве', () => {
