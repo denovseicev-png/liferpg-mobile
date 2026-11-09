@@ -650,7 +650,7 @@ test('АТЛАС откатывает создание записи, если л
 });
 
 test('Service Worker обновляет кеш PWA для установки АТЛАСА', () => {
-  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v17'/);
+  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v18'/);
   assert.match(serviceWorker, /'\.\/index\.html'/);
 });
 
@@ -714,7 +714,8 @@ test('удаление квеста не стирает уже начислен�
   assert.equal(c.state.bankHistory.length, 1);
 });
 
-test('удаление этапа не затрагивает соседние этапы', () => {
+test('удаление этапа подтверждается окном приложения и не затрагивает соседние этапы', () => {
+  let dialog = null;
   const c = {
     state: {
       goals: [{
@@ -726,17 +727,25 @@ test('удаление этапа не затрагивает соседние �
         ]
       }]
     },
-    confirm: () => true,
-    save: () => true,
-    render: () => {},
-    toast: () => {}
+    esc: value => String(value),
+    openModal: (title, body, submitText, callback) => {
+      dialog = { title, body, submitText, callback };
+    }
   };
   vm.runInNewContext(functionSource('deleteGoalStep'), c);
   c.deleteGoalStep('goal-1', 1);
+
+  assert.equal(dialog.title, 'Удалить этап цели');
+  assert.equal(dialog.submitText, 'Удалить');
+  assert.match(dialog.body, /Второй/);
+  assert.equal(c.state.goals[0].steps.length, 3);
+
+  dialog.callback({});
   assert.deepEqual(
     JSON.parse(JSON.stringify(c.state.goals[0].steps.map(x => x.title))),
     ['Первый', 'Третий']
   );
+  assert.doesNotMatch(functionSource('deleteGoalStep'), /confirm\\(/);
 });
 
 test('при ошибке сохранения порядок наград восстанавливается', () => {
@@ -755,6 +764,153 @@ test('при ошибке сохранения порядок наград во�
 });
 
 test('Service Worker обновляет кеш PWA для управления записями', () => {
-  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v17'/);
+  assert.match(serviceWorker, /const CACHE_NAME = 'liferpg-mobile-v18'/);
   assert.match(serviceWorker, /'\.\/index\.html'/);
+});
+
+
+test('кнопка удаления этапа связана с явным действием и обработчиком', () => {
+  assert.match(html, /data-action="delete-goal-step"/);
+  assert.match(html, /data-action="edit-goal-step"/);
+  assert.match(html, /data-goal-id="/);
+  assert.match(html, /if\\(t\\.dataset\\.action==='delete-goal-step'\\)/);
+  assert.match(html, /if\\(t\\.dataset\\.action==='edit-goal-step'\\)/);
+  assert.doesNotMatch(html, /data-step-delete=/);
+});
+
+test('удаление доступно для всех пользовательских типов записей', () => {
+  const kinds = {
+    quest: 'quests',
+    habit: 'habits',
+    goal: 'goals',
+    note: 'notes',
+    template: 'templates',
+    freeze: 'freezes',
+    grade: 'grades',
+    exam: 'exams',
+    topic: 'topics',
+    card: 'cards',
+    reward: 'rewards',
+    diary: 'diary',
+    review: 'reviews',
+    studySession: 'studySessions',
+    miniTask: 'miniTasks'
+  };
+
+  for (const [kind, key] of Object.entries(kinds)) {
+    let dialog = null;
+    const c = {
+      state: { [key]: [{ id: 'record-1', title: 'Тестовая запись' }] },
+      esc: value => String(value),
+      openModal: (title, body, submitText, callback) => {
+        dialog = { title, body, submitText, callback };
+      }
+    };
+    vm.runInNewContext(functionSource('deleteItem'), c);
+    c.deleteItem(kind, 'record-1');
+
+    assert.ok(dialog, 'нет окна удаления для ' + kind);
+    assert.equal(c.state[key].length, 1, 'удаление должно ждать подтверждения: ' + kind);
+    assert.equal(dialog.submitText, 'Удалить');
+    dialog.callback({});
+    assert.equal(c.state[key].length, 0, 'запись не удалена: ' + kind);
+  }
+  assert.doesNotMatch(functionSource('deleteItem'), /confirm\\(/);
+});
+
+test('редактирование доступно для всех пользовательских типов записей', () => {
+  const kinds = {
+    quest: 'quests',
+    habit: 'habits',
+    goal: 'goals',
+    note: 'notes',
+    template: 'templates',
+    studySession: 'studySessions',
+    grade: 'grades',
+    exam: 'exams',
+    topic: 'topics',
+    card: 'cards',
+    reward: 'rewards',
+    diary: 'diary',
+    review: 'reviews',
+    miniTask: 'miniTasks',
+    freeze: 'freezes'
+  };
+  const addKinds = new Set([
+    'quest', 'habit', 'goal', 'note', 'template', 'studySession'
+  ]);
+  const state = {};
+  for (const [kind, key] of Object.entries(kinds)) {
+    state[key] = [{ id: 'id-' + kind, title: kind }];
+  }
+  const added = [];
+  const edited = [];
+  const c = {
+    state,
+    addItem: (kind, item) => added.push([kind, item.id]),
+    editRecord: (kind, item) => edited.push([kind, item.id])
+  };
+  vm.runInNewContext(functionSource('editItem'), c);
+
+  for (const kind of Object.keys(kinds)) {
+    c.editItem(kind, 'id-' + kind);
+  }
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(added.map(x => x[0]))),
+    [...addKinds]
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(edited.map(x => x[0]))),
+    Object.keys(kinds).filter(kind => !addKinds.has(kind))
+  );
+});
+
+test('редактирование этапа меняет только выбранный этап', () => {
+  let dialog = null;
+  const c = {
+    state: {
+      goals: [{
+        id: 'goal-1',
+        steps: [{ title: 'Первый' }, { title: 'Второй' }]
+      }]
+    },
+    openModal: (title, body, submitText, callback) => {
+      dialog = { title, body, submitText, callback };
+    },
+    $: () => ({ elements: { title: { value: '' } } })
+  };
+  vm.runInNewContext(functionSource('editGoalStep'), c);
+  c.editGoalStep('goal-1', 1);
+  assert.equal(dialog.title, 'Изменить этап');
+  assert.equal(dialog.submitText, 'Сохранить');
+  dialog.callback({ get: () => 'Новый второй этап' });
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(c.state.goals[0].steps.map(x => x.title))),
+    ['Первый', 'Новый второй этап']
+  );
+});
+
+test('удаление квеста через окно приложения сохраняет уже начисленные XP и монеты', () => {
+  let callback = null;
+  const c = {
+    state: {
+      quests: [{ id: 'done-quest', title: 'Готово' }],
+      xp: 10, total: 10, coins: 1,
+      journal: [{ id: 'xp-1', xp: 10 }],
+      bankHistory: [{ id: 'coin-1', amount: 1 }]
+    },
+    esc: value => String(value),
+    openModal: (title, body, submitText, fn) => { callback = fn; }
+  };
+  vm.runInNewContext(functionSource('deleteItem'), c);
+  c.deleteItem('quest', 'done-quest');
+  assert.equal(c.state.quests.length, 1);
+  callback({});
+  assert.equal(c.state.quests.length, 0);
+  assert.equal(c.state.xp, 10);
+  assert.equal(c.state.total, 10);
+  assert.equal(c.state.coins, 1);
+  assert.equal(c.state.journal.length, 1);
+  assert.equal(c.state.bankHistory.length, 1);
 });
