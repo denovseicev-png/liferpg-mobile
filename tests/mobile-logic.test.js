@@ -745,7 +745,7 @@ test('удаление этапа подтверждается окном при
     JSON.parse(JSON.stringify(c.state.goals[0].steps.map(x => x.title))),
     ['Первый', 'Третий']
   );
-  assert.doesNotMatch(functionSource('deleteGoalStep'), /confirm\\(/);
+  assert.doesNotMatch(functionSource('deleteGoalStep'), /confirm\(/);
 });
 
 test('при ошибке сохранения порядок наград восстанавливается', () => {
@@ -773,8 +773,8 @@ test('кнопка удаления этапа связана с явным де
   assert.match(html, /data-action="delete-goal-step"/);
   assert.match(html, /data-action="edit-goal-step"/);
   assert.match(html, /data-goal-id="/);
-  assert.match(html, /if\\(t\\.dataset\\.action==='delete-goal-step'\\)/);
-  assert.match(html, /if\\(t\\.dataset\\.action==='edit-goal-step'\\)/);
+  assert.match(html, /if\(t\.dataset\.action==='delete-goal-step'\)/);
+  assert.match(html, /if\(t\.dataset\.action==='edit-goal-step'\)/);
   assert.doesNotMatch(html, /data-step-delete=/);
 });
 
@@ -815,7 +815,7 @@ test('удаление доступно для всех пользователь
     dialog.callback({});
     assert.equal(c.state[key].length, 0, 'запись не удалена: ' + kind);
   }
-  assert.doesNotMatch(functionSource('deleteItem'), /confirm\\(/);
+  assert.doesNotMatch(functionSource('deleteItem'), /confirm\(/);
 });
 
 test('редактирование доступно для всех пользовательских типов записей', () => {
