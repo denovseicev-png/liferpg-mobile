@@ -663,10 +663,10 @@ test('в пользовательских разделах доступны ре
     assert.match(html, new RegExp('data-edit="' + kind + '"'));
     assert.match(html, new RegExp('data-delete="' + kind + '"'));
   }
-  assert.match(html, /data-edit="'+kind+'"|data-edit="\'+kind/);
-  assert.match(html, /data-delete="'+kind+'"|data-delete="\'+kind/);
-  assert.match(html, /function editRecord\\(/);
-  assert.match(html, /function editGoalStep\\(/);
+  assert.match(html, /data-edit="'+kind/);
+  assert.match(html, /data-delete="'+kind/);
+  assert.match(html, /function editRecord\(/);
+  assert.match(html, /function editGoalStep\(/);
   assert.match(html, /data-step-edit=/);
   assert.match(html, /data-step-delete=/);
 });
